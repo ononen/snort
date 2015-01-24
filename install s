@@ -1,0 +1,12 @@
+1.安装daq
+	apt-get install bison flex g++
+	download libpcap www.dumptcp.org
+	libpcap
+	libdnet
+
+	若在执行daq的./configure时显示libpcap版本不匹配问题，则在/usr/local/lib中将所有libpcap.*文件全部删除，重新安装即可
+2.安装snort
+	libpcre
+	zlib
+
+若需要ips功能需要在安装daq之前装以下:apt-get -y install libnetfilter-queue-dev libnetfilter-queue1 libnfnetlink-dev libnfnetlink0
