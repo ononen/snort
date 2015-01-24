@@ -1,0 +1,656 @@
+此文件包含一个snort配置样例。
+共分五步骤：
+1 设置你的网络变量
+2 配置动态加载库
+3 配置预处理器
+4 配置输出插件
+5 增加任意的运行时配置向导
+6 自定义规则集
+
+step1：设置你的网络变量1 其中针对本地网络给出3种方式：
+
+a) 清晰指定你的本地网络
+var HOME_NET 192.168.1.0/24
+(如果希望构建的Snort支持IPV6支持，则这里定义网段的类型就
+应该改为pvar)
+
+b) 使用全局变量 
+var HOME_NET $eth0_ADDRESS
+
+c) 也可一定义一个地址列表，中间用逗号隔开：
+var HOME_NET [10.1.1.0/24,192.168.1.0/24] (列表中不能有空格）
+
+d) 定义任意的IP地址
+var HOME_NET any
+
+2 针对外部网络
+a) 全部
+var EXTERNAL_NET any
+
+b) 除了HOME_NET之外的
+var EXTERNAL_NET !$HOME_NET
+
+3 配置你的服务器列表
+（如果你都没有运行一个web server，干嘛还要检测HTTP 攻击呢？这样可以基于IP地址进行快速的过滤，这些配置必须保持和$HOME_NET相同的配置框架）
+
+DNS服务：
+var DNS_SERVERS $HOME_NET
+
+SMTP服务：
+var SMTP_SERVERS $HOME_NET
+
+Web 服务：
+var HTTP_SERVERS $HOME_NET
+
+SQL服务：
+var SQL_SERVERZ $HOME_NET
+
+Telnet服务：
+var TELNET_SERVERS $HOME_NET
+
+FTP服务：
+var FTP_SERVERS $HOME_NET
+
+SNMP服务：
+var SNMP_SERVERS $HOME_NET
+
+4 配置你的服务端口
+这使得snort去跟踪针对特点端口应用的攻击，如你的web server在端口8180上，则你应这样配置：
+
+portvar HTTP_PORTS 8180 
+
+不过这个值通常为80，因此定义为：
+portvar HTTP_PORTS 80
+
+如果你希望定义多HTTP端口，语法是这样的：
+portvar HTTP_PROTS [80,8080] 或者
+portvar HTTP_PROTS[80,8000:8080]
+
+但是在rule中只能定义$HTTP_PORTS一次，之前曾有方法对此变量进行重定义，包含了两次定义，这种做法已经不再使用。
+
+eg：
+定义你希望发现SHELLCODE的端口：
+portvar SHELLCODE_PORTS !80
+
+可能发想对ORACLE的攻击：
+portvar ORACLE_PORTS 1521
+
+针对FTP服务的端口：
+portvar FTP_PORTS 21
+
+AIM 服务（聊天服务）：
+AOL公司有增加新的AIM 服务的习惯，我们将他们都增加到服务列表中，而不是修改它们的签名（这一句话，我还理解的不够透彻，原文是： AOL has a habit of adding new AIM servers, so instead of modifying signatures when they do, we add them to this list of servers.)
+var AIM_SERVERS [64.12.24.0/23, ....]
+
+5 配置你的rules文件路径
+这个可以是一个相对路径（不过对于windows用户，最好给绝对路径）
+
+var RULE_PATH /etc/snort/rules
+var PREPROC_RULE_PATH /etc/snort/preproc_rules6 配置你的解码器
+说明：snort的解码器会因为很多事情而产生警报，如报文头截断、不正常的长度和不经常使用的tcp 选项。
+
+关闭一般解码事件：
+config disable_decode_alerts
+
+关闭针对实验TCP选项的警告
+config disable_tcpopt_experimental_alerts
+
+关闭针对失效TCP选型的警告
+config disable_tcpopt_obsolete_alerts
+
+关闭针对T/TCP警告的相应
+config disable_tcpopt_ttcp_alerts
+
+关闭针对所有TCP选项类型事件的相应
+config disable_tcpopt_alerts
+
+关闭针对非法ip选型的警告
+config disable_ipopt_alerts
+
+开启警告：如果(IP,TCP,UDP)的长度域中的值要比真实捕获数据包的长度值要大，则发出警告：
+config enable_decode_oversized_alerts
+
+同上面场景但是，但如果在inline模式中，将直接drop此包，但需保证上面的config: enable_decode_oversized_alerts已经开启：
+config enable_decode_oversized_drops
+
+7 配置你的检测引擎
+如果你的电脑只有非常限定的资源，则需使用不同模式匹配:
+config detection: search-method lowmem
+
+8 配置inline重置(resets)
+如果你在snort的inlineMode()模式中运行iptables防火墙，我们现在可以通过物理设备执行重置操作。我们从iptables中获取indev，然后使用此作为发送resets的接口。这个配置将使用源mac地址来作为你想重置包的参数。这种方式bridge将会继续保持stealthy. 如果源mac地址选项没有设置，我们默认将通过raw socket发送resets，但需要ip地址。
+config layer2resets: 00:06:76:DD:5F:E3
+
+
+**********************************************
+Step2: 配置动态加载库
+
+如果snort配置了使用动态加载库，则库将会在这里加载。
+下面的配置选型都可以通过command行执行。
+
+1 从安装路径加载所有动态预处理器
+（=在命令行选型：--dynamic-preprocessor-lib-dir)
+dynamicpreprocessor directory /usr/lib/snort_dynamicpreprocessor/
+
+2 从安装路径加载指定的动态预处理器
+(=命令行选型： --dynamic-preprocessor-lib)
+dynamicpreprocessor file /usr/lib/snort_dynamicpreprocessor/libdynamicexample.so
+
+3 从安装路径加载动态引擎
+（=命令行选项：--dynamic-engine-lib)
+dynamicengine /user/lib/snort_dynamicengine/libsf_engine.so
+
+4 从安装路径加载所有动态规则库
+（--dynamic-detection-lib-dir)
+dynamicdetection directory /usr/lib/snort_dynamicrule/
+
+5 加载指定动态规则库
+（--dynamic-detection-lib)
+dynamicdetection file /usr/lib/snort_dynamicrule/libdynamicexamplerule.so
+
+************************************************
+Step3: 配置预处理器
+
+一般针对预处理的配置形式如下：
+preprocessor <name_of_processor>: <configuration_options>
+
+1. frag3: 基于目标的IP分片重组
+Frag3是一个新的IP分片重组处理器，可以执行基于目标的IP分段处理。通过doc目录下的README.frag3，你可以得到更多相关背景和配置消息。
+
+Frag3配置分为两步，首先是全局的初始化阶段，之后是定义分段引擎设置。
+
+全局配置定义了snort可以同时跟踪的分片包数目，并且给你考虑子系统内存的一些选型，你可以选择将所有内存预分配给frag3系统。
+
+a) frag3_global 选项：
+
+max_frag3: 同时最大分片跟踪数，默认是8192
+mem_cap: frag3可以在任意指定时间访问的最大内存，默认为4MB
+prealloc_frages: 一次能够处理的最大分片数目。它取代memcap系统，而是通过静态分配来提高性能。没有默认值，每一个典型的预分配分段占有1550bytes左右，然而，精确数量是由snaplen(解释：SnapLen, Snap Length, or snapshot length is the amount of data for each frame that is actually captured by the network capturing tool and stored into the CaptureFile. This is sometimes called PacketSlicing.)决定的，要留意这个可以高达64k。
+
+b) frag_engine 选项：
+timeout: 一个分片的包在消亡前可能激活需要的总时间，默认是60sec。
+ttl_limit: 在分片中可允许的包的TTL值。这要基于初始接受的片段的TTL。
+min_ttl: 分片中可接受的最小TTL值，分片的TTLs要是低于此值将会被丢弃，默认值0.
+detect_anomalies: 激活frag3的异常检测机制
+policy: 分配到此引擎的基于目标的策略，默认为BSD，linux系统为LINUX
+bind_to: 绑定到此引擎的IP地址集，默认是所有主机。
+
+c) Frag3 配置例子：
+preprocessor frag3_global: max_frag3 65536, prealloc_frag3 65536
+preprocessor frag3_engine: policy linux/
+bind_to [10.1.1.12/32,10.1.1.13/32] /
+detect_anomalies
+preprocessor frag3_engine: policy first /
+bind_to 10.2.1.0/24 /
+detect_anomalies
+preprocessor frag3_engine: policy last/
+bind_to 10.3.1.0/24
+preprocessor frag3_engine: policy bsd
+
+在snort.conf默认开启的配置是：
+preprocessor frag3_global: max_frags 65536
+preprocessor frag3_engine: policy first detect_anomalies overlap_limit 10
+
+2. Stream5
+stream5是snort中的一个基于目标的流引擎。它能够处理TCP和UDP跟踪连接，以及TCP组装。
+在README.stream5可以看到更详细的配置选项。
+
+eg:
+preprocessor stream5_global: max_tcp 8192, track_tcp yes, track_dup no.
+preprocessor stream_tcp: policy first
+
+在产品系统中不推荐的：
+preprocessor stream5_tcp: policy first, use_static_footprint_sizes
+preprocessor stream5_udp: ignore_any_rules
+
+3 性能策略：
+这一部分在Snort Manual中有介绍，你可以阅读。
+preprocessor perfmonitor： time 300 file /var/snort/snort.stats pktcnt 10000
+
+4 http检查：标准化和检测Http流量和协议异常
+这里提供了很多选项，可以查看/doc/README.http_inspect.
+unicode.map应该在你snort.conf所在的地方，你应该给一个snort可以找到的全路径。
+preprocessor http_inspect: global /
+iis_unicode_map unicode.map 1252
+preprocessor http_inspect_server: server default /
+profile all ports {80 8080 8180} oversize_dir_length 500
+
+5 单一应用服务器的配置：
+proprocessor http_inspect_server: server 1.1.1.1 /
+ports { 80 3128 8080 }
+server_flow_depth 0 /
+ascii no /
+double_decode yes /
+non_rfc_char { 0x00 } /
+chunk_length 500000/
+non_strict /
+oversize_dir_length 300 /
+no_alters
+
+6 rpc_decode: 标准化RPC 流量
+除了默认的通常的4-byte编码，RPC被当作候补编码。这个插件需要RFC的服务端口作为参数（假定给出的端口都是运行此类型服务的，如果不是，将改变端口或者关闭）
+RPC解码预处理器使用产生器ID 106
+参数：需要使用空格分开
+alert_fragments: 警报，在所有RPC分段TCP数据
+no_alert_multiple_requests: 当1个包中的rpc查询大于1时，发生警报
+no_alert_large_fragments: 当分片大小超过当前包大小时不报警
+no_alert_incomplete: 当一个单片段大小超过当前包大小时不报警
+
+（我对fragment和segment的区别还不是清楚）
+eg:
+preprocessor rpc_decode: 111 32771
+
+7 bo: Back Orifice 后门检测器
+用来检测网络上的 后门流量
+参数：
+语法：
+preprocessor bo: noalert {client | server | general | snort_attack } /
+drop {client | server | general | snort_attack}
+案例：
+preprocessor bo: noalert {general server} drop { snort_attack}
+
+后门检测器Bo使用发生器ID：105，并使用以下SIDS：
+SID 事件描述
+1 后门流量检测
+2 后门客户端流量检测
+3 后门服务端流量检测
+4 后门Snort缓冲区攻击
+proprocessor bo
+
+8 ftp_telnet: FTP & Telent 标准化，协议强制和缓冲区溢出
+这个预处理器会标准化telnet 协商字符串从telnet和ftp流量中。它查找打破协议数据流标准化的流量，使用标准化的表示取而代之。这样的内容模式匹配关键词可以在不进行修改情况下的工作。
+它同样可以执行协议正确性检测对于FTP命令频道，并鉴定开放的FTP数据转移。
+
+FTPTelnet有很多可选型，可以读README.ftptelnet来寻求配置选项，对于全局telnet、ftp server, 协议的ftp clinet 分段。
+在Step2中，可以这样设置来加载ftptelnet预处理器：
+dynamicpreprocessor file <full path to libsf_ftptelnet_preproc.so>
+或者使用命令行：
+--dynamic-preprocessor-lib <full path to libsf_ftptelent_preproc.so>
+
+eg:
+preprocessor ftp_telnet global /
+encrypted_traffic yes/
+inspection_type stateful
+
+preprocessor ftp_telnet_protocol: telnet /
+normalize /
+ayt_attack_thresh 200
+
+下面的是符合2004-09-18发布的规则：
+cwd可以包含长度为200的参数；
+MODE 有一个额外z模式(压缩)；
+检查字符串格式，通过USER & PASS 命令；
+检查nDTM命令（设置文件的修改时间）.
+
+preprocessor ftp_telnet_protocol: ftp server default /
+def_max_param_len 100/
+alt_max_param_len 200 {CWD} /
+cmd_validity MODE <char ASBCZ> /
+cmd_validity MDTM <[data nnnnnnnnnnnnnn[.n[n[n]]] string >/
+chk_str_fmt { USER PASS RNAR RNTO SITE MKD } /
+telent_cmds yes/
+data_chan
+
+preprocessor ftp_telnet_protocol: ftp client default /
+max_resp_len 256 /
+bounce yes /
+telenet_cmds yes
+
+9 SMTP
+smtp标准化，协议强制和缓冲区溢出
+这个预处理器通过取出多余的空间来标准化SMTP命令，它会查找过长的命令行，响应行以及数据头行。它会在非法的命令或者指定的合法命令行发出警报。可以有选择的忽略邮件数据，并且可以忽略TLS加密数据。
+
+SMTP有很多选项提供，可以查看README.SMTP。
+
+在Step2中，可以通过以下设置来加载smtp预处理器。
+dynamicpreprocessor file <full path to libsf_smtp_prepro.so>
+or use commandline option
+--dynamic-preprocessor-lib <full path to libsf_smtp_prepro.so>
+
+配置Smtp预处理器：
+preprocessor smtp: / 
+ports {25 587 691} /
+inspection_type stateful /
+normalize cmds /
+normalize_cmds { EXPN VRFY RCPT } /
+alt_max_command_line_len 260 { MAIL }
+alt_max_command_line_len 300 { RCPT }
+alt_max_command_line_len 500 { HELP HELP ETRN} /
+alt_max_command_line_lne 255 { EXPN VRFY }
+
+10 sfPortscan预处理器
+端口扫描检测模块。检测各种不同类型的端口扫描。通过README.sfportscan可以得多更多关于检测原理、警告类型以及端口扫描细节。
+
+配置选项：
+
+proto { tcp udp icmp ip all }
+这个关于原型选择的参数要列出你希望检测的协议类型。参数之间用空格分开并且不能有逗号。
+
+scan_type { portscan portsweep decoy_portscan distributed_portscan all }
+这个参数描述你希望寻则检测的扫描类型，参数应用空格区分并且不能有逗号。
+
+sense level { low|medium|high}
+这个选项只需要一个参数，用来确定检测端口扫描的敏感度水平。‘low’级别使用通用方法来查找响应错误，如TCP RSTs和ICMP无法到达，这个级别需要最少的优化。medium级别会检测端口扫描和过滤端口扫描（那些没有收到响应的端口扫描），这个级别通常需要优化从NATed IPs以及DNS
+cache servers来的扫描事件。high级别有最小的端口检测限制，比medium有更长的时间窗，需要more tuning and may be noisy on very active networks（这一句话我还理解不了），然后这个界别捕获更多的扫描。
+
+memcap { positive integer)
+分配给端口扫描的最大字节数。数字越高，越多节点可以被跟踪。
+
+logfile { filename }
+指定端口扫描和详细端口扫描值的写入日志文件位置。如果没有以/开头，snort会写入配置的log目录。通过README.sfportscan查看更详细的关于项log文件写日志的方法。
+
+watchip { Snort IP List }
+ignore_scanners { snort IP list }
+ignore_scanned { Snort IP List }
+这些选项采用snort IP list作为参数，其中watch_ip选项制定需要观察的IP(s). ignore_scanners指定作为端口扫描者要忽略的IP(s)，需要注意的是这些主机会作为被扫描主机依然被观察，ignore_scanners用来优化针对动态主机，如Nat，nessus主机等的警告。ignore_scanned选项指定要作为被扫描主机要忽略的IPs,作为扫描者的主机他们依然被观察。这个选型被用来优化从syslog servers过来的活动主机的警报。
+
+detect_ack_scans
+这个选型will include sessions pickup up in midstream by the stream module,这队检测ACK 扫描是很有必要的。然而，这也可能会导致错误警报，特别是under heavy load with dropped packets,这也是这个原型默认是off的原因。
+
+eg:
+preprocessor sfportscan: proto { all } /
+memcap { 10000000 } /
+sense_level { low }
+
+11 arpspoof 预处理器 arp欺骗
+使用从Jeff Nathan过来的实验性质的ARP检测代码，用来检测ARP攻击和单播ARP攻击，并且指定ARP映射监控。要想使用此预处理器，你必须制定IP和MAC地址 on the same layer 2 segment as you. 指定一个主机IP MAC在同一行。同时采用-unicast选型来开启单播arp请求检测。Arpspoof使用产生器GID:112,针对此GID使用一下SIDS：
+
+SID 事件描述
+1 单播Arp请求
+2 以太结构ARP错配(src)
+3 以太结构ARP错配(dst)
+4 ARP cache重写攻击
+
+eg:
+preprocessor arpspoof
+preprocessor arpspoof_detect_host: 192.168.40.1 f0:0f:00:of:0f:00
+
+12 SSH 预处理器
+SSH预处理器检测以下exploit：challenge-Response Authentication overflow, CRC 32 overflow, Secure CRT version string overflow, protocol version mismatches.
+
+CRAuth 和 CRC 32攻击都发生在key交换之后，因此都是加密的。两者的攻击包含在认证交换之后立即发送一个大于20Kb+的payload到服务端。为了检测这种攻击，SSH 预处理计算传送到服务端的字节数目。如果超过预定义限制（通过max_client_bytes设置），就会发生警报。由于CRAuth只影响SSHv2，而CRC 32只影响SSHv，因此SSH版本字符串可以用来区分攻击类型。
+
+Secure CRT和协议错配exploits在key交换之前是可以看到的。
+
+此预处理器有很多选型提供，可以查看：README.ssh。
+
+对于Step2,通过一下设置可以加载ssh预处理器：
+dynamicpreprocessor file <full path to libsf_ssh_prepro.so>或者使用命令行选项：
+--dynamic-preprocessor-lib <full path to libsf_ssh_prepro.so>
+
+eg:
+preprocessor ssh: server_ports { 22 } /
+max_client_bytes 19600 /
+max_encrypted_packets 20 /
+enable_respoverflow enable_ssh1crc32 /
+enalbe_respoverflow enable_protomismatch
+
+13 DCE/RPC 预处理器
+DCR/RPC预处理其检测和解码SMB和DCE/RPC流量，首先关注DCE/PRC流量，并且只有在DCE/RPC数据被SMB层传递时才会解码SMB。
+
+当前，预处理器可以处理分片重组在SMB和DCE/RPC层。Snort规则可以通过使用两者分片方式躲避。通过此预处理器，使规则得到一个缓冲区，通过重组的SMB和DCE/RPC包去检测。
+
+在SMB层，只有分片使用WriteAndX可以在当前版本重组，其它方法预计会在以后的处理器版本中重组。
+
+通过在SMB数据开始查找"xFFSMB"来检测SMB，也可以通过检测NetBIOS头来检测"set session"类型。
+
+自动检测DCE/RPC是不可靠的。当前，在数据报中有两个字节被检测。假定数据是DCE/RPC头，一个字节是用来检测DCE/RPC版本5，另外一个用来检测类型“DCE/RPC 请求”。如果两者都匹配，在这种假设下，救人为预处理其找到了DCE/PRC数据。如果接下来的检测是没有意义的，就停止处理。
+
+可以通过README.dcerpc来获取更多配置选项。
+
+对于Step2，可以这样来加载DCERPC预处理器：
+dynamicpreprocessor file <full path of libsf_dcerpc_preproc.so>
+or命令行：
+--dynamic-preprocessor-lib <full path of libsf_dcerpc_preproc.so>
+
+eg:
+preprocessor dcerpc: /
+autodetect / 
+max_flag_size 3000 / 
+memcap 100000
+
+14 DCE/RPC 2 预处理器
+去doc/README.dcerpc2 查看解释和配置，eg：
+preprocessor dceproc2
+preprocessor dceproc2_server: default
+
+15 DNS 预处理器
+DNS 预处理其能够队DNS响应流量进行解码，并且检测一些脆弱点。
+从README.dns查找详细配置。
+
+load:
+dynamicpreprocessor file <full path to libsf_dns_preproc.so>
+in command mode:
+--dynamic-preprocessor-lib <full path to libsf_dns_preproc.so>
+
+eg:
+preprocessor dns: /
+ports { 53 }
+enable_rdate_overflow
+
+16 SSL 预处理器
+考虑到性能和减少误报率，加密流量应该被snort忽略。SSL动态预处理器会探测SSL流量，并提供是否和合适停止探测的选项。
+典型的，SSL被HTTPS在端口443上使用。通过SSLPP来监视端口443，只有每一个连接的SSL握手或乘可以被探测，一旦数据流量被加密，就没有进一步的检测。
+
+如果你不完全相信SSL capable servers的能力，你可以从你的配置中剔除“trustservers"这个选项。
+
+重要提示： Stream5应该明确地被告知重组流量，当你试图检测SSL加密流量。对于Stream5，要增加对端口443的重组，需要增加配置：port both 443.
+
+eg: 
+preprocessor ssl: noinpsect_encrypted, trustservers
+
+*************************************************************
+Step4: 配置输出插件
+对你希望使用输入方式取消注释。输出插件的使用form为：
+output <name_of_plugin>: <configuration_options>
+alert_syslog: log alerts to syslog
+
+使用一个或多个syslog设施作为参数。win32也可以有选择地制定一个特殊的主机名/端口，在win32下，默认的主机名127.0.0.1，默认端口514（我要死？？ ^-^)
+
+Unix风味应该使用一下方式：
+output alert_syslog: LOG_AUTH LOG_ALERT
+
+win32可以使用一下任意模式：
+output alert_syslog: LOG_AUTH LOG_ALERT
+output alert_syslog: host=hostname, LOG_AUTH LOG_ALERT
+output alert_syslog: host=hostname:port, LOG_AUTH LOG_ALERT
+
+1 log_tcpdump: 以二进制tcpdump格式log包
+唯一的参数就是输出文件名：
+output log_tcpdump: tcpdump.log
+
+2 database:log到多种类型的数据库中
+查看README.database得到更多配置信息。
+
+output database: log,mysql,user=root password=test dbname=db host=localhost
+
+ouput database: alert, postgresql, user=snort dbname=snort
+
+ouput database: log, odbc, user=snort, dbname=snort
+
+ouput database: log, mysql, dbname=snort user=snort password=snort-db host=localhost
+
+ouput database: log, oracle, dbname=snort user=snort password=test 
+
+<debian>
+(#DESTART#)
+(#DBEND#)
+保持远离此区域（#DESTART#以及#DBEND#),否则你就破会配置进程(只针对snort-pqsql 和 snort-mysql),你防置在两者之间的任何东西都会从配置中移除。
+</debian>
+
+3 unified：snort统一化二进制警告和log格式
+提供两者格式用来log和产生警告,"unified"格式是一种直接的二进制格式用来log和alert，快速并且有效。通过使用barnyard（一种新的alrt/log处理器），大部分的慢速存储机制，如数据库和网络形式都会被avoid。
+
+查看spo_unified.h来获取数据格式：
+两个参数：
+filename: 基本写入文件（当前time_t会被附加）
+limit： 最大缓冲文件大小（单位MB，默认为128MB）
+
+eg:
+output alert_unified: filename snort.alert, limit 128
+output alert_unified: filename snort.log, limit 128
+
+4 prelude: log to Prelude Hybrid IDS 系统
+prelude profile默认名：snort
+
+classification.config给出的默认映射：
+info=4
+low=3
+medium=2
+high=anything below medium
+eg:
+output alert_prelude
+output alert_prelude: profile=snort-profile-name
+
+5 你可以有选择地定义新的规则类型并且使用一个或多个输出方式
+输出特定类型：
+下面这个例子将会创建一个类型，并仅log到tcpdump
+
+ruletype suspicous
+{
+type log
+output log_tcpdump: suspicious .log
+}
+
+使用案例：
+suspicious tcp $HOME_NET any -> $HOME_NET 6667 (msg:" Internal IRC Server";)
+
+下面的例子将会创建写入到syslog和mysql数据库：
+
+ruletype redalert
+{
+type alert
+output alert_syslog: LOG_AUTH LOG_ALERAT
+ouput database: log, mysql, user=snort dbname=snort host=localhost
+}
+
+使用案例：
+redalert tcp $HOME_NET any -> $EXTERNAL_NET 31337 /
+(msg: "some one is bing LEET"; flags:A+ )
+
+6 包含分类和优先设置
+对于winodws用户：哥们，最好有绝对路径。
+include classification.config
+
+7 包含引用系统
+include reference.config
+
+*************************************************
+Step5: 通过配置声明来配置Snort
+
+通过Snort manual来获取full配置引用。
+
+config flowbits_size: 64
+
+新的全局忽略配置选型（from andy Mullican)
+config ignore_ports: <tcp|udp> <list of ports 用空格区分）
+config ignore_ports: tcp 21 6667:6671 1356
+config ignore_ports: udp 1:17 53
+
+************************************************
+Step6：自定义你的规则集
+实时的snort规则提供：http://www.snort.org
+snort web站点会告诉你如何写新的自定义snort 规则。
+
+包含所有相关规则集
+下列规则集默认禁用：
+web-attacks, backdoor, shellcode, policy, porn, info, icmp-info, virus, chat, multimedia, and p2p
+
+这些规则要么需要专门网站策略制定或者为了在多数环境中不产生误报警告而进行优化。
+
+请读README.alert_order: 规则顺序是如何影响警报触发的。
+
+下面附上默认的Snort.conf开启的规则集和关闭的（关闭的以#开头）：
+
+include $RULE_PATH/local.rules
+include $RULE_PATH/bad-traffic.rules
+include $RULE_PATH/exploit.rules
+include $RULE_PATH/community-exploit.rules
+include $RULE_PATH/scan.rules
+include $RULE_PATH/finger.rules
+include $RULE_PATH/ftp.rules
+include $RULE_PATH/telent.rules
+include $RULE_PATH/rpc.rules
+include $RULE_PATH/reservices.rules
+include $RULE_PATH/dos.rules
+include $RULE_PATH/community-dos.rules
+include $RULE_PATH/ddos.rules
+include $RULE_PATH/dns.rules
+include $RULE_PATH/tftp.rules
+
+特定的web服务规则集：
+include $RULE_PATH/web-cgi.rules
+include $RULE_PATH/web-coldfusion.rules
+include $RULE_PATH/web-iis.rules
+include $RULE_PATH/web-frontpage.rules
+include $RULE_PATH/web-misc.rules
+include $RULE_PATH/web-client.rules
+include $RULE_PATH/web-php.rules
+include $RULE_PATH/community-sql-injection.rules
+include $RULE_PATH/community-web-client.rules
+include $RULE_PATH/community-web-dos.rules
+include $RULE_PATH/community-web-iis.rules
+include $RULE_PATH/community-web-misc.rules
+include $RULE_PATH/community-web-php.rules
+
+针对其它服务的规则：
+include $RULE_PATH/sql.rules
+include $RULE_PATH/xll.rules
+include $RULE_PATH/icmp.rules
+include $RULE_PATH/netbios.rules
+include $RULE_PATH/misc.rules
+include $RULE_PATH/attack-responses.rules
+include $RULE_PATH/oracle.rules
+include $RULE_PATH/community-oracle.rules
+include $RULE_PATH/mysql.rules
+include $RULE_PATH/snmp.rules
+include $RULE_PATH/community-smtp.rules
+include $RULE_PATH/smtp.rules
+include $RULE_PATH/imap.rules
+include $RULE_PATH/community-imap.rules
+include $RULE_PATH/pop2.rules
+include $RULE_PATH/pop3.rules
+
+include $RULE_PATH/nntp.rules
+include $RULE_PATH/community-nntp.rules
+include $RULE_PATH/community-sip.rules
+include $RULE_PATH/other-ids.rules
+
+Attack-in-progress rules: 攻击进行时规则
+include $RULE_PATH/web-attacks.rules
+include $RULE_PATH/backdoor.rules
+include $RULE_PATH/community-bot.rules
+include $RULE_PATH/community-virus.rules
+
+这个几乎没用：
+#include $RULE_PATH/virus.rules
+注意：这条规则非常chatty，小心使用
+#include $RULE_PATH/shellcode.rules
+
+Policy相关规则：
+#include $RULE_PATH/policy.rules
+#include $RULE_PATH/community-policy.rules
+#include $RULE_PATH/porn.rules
+#include $RULE_PATH/community-inappropriate.rules
+#include $RULE_PATH/chat.rules
+#include $RULE_PATH/multimedia.rules
+#include $RULE_PATH/p2p.rules
+#include $RULE_PATH/comunity-game.rules
+#include $RULE_PATH/community-misc.rules
+
+非常Chatty的规则：
+#include $RULE_PATH/info.rules
+#include $RULE_PATH/icmp-info.rules
+#include $RULE_PATH/community-icmp.rules
+
+实验性规则：（空的）
+#include $RULE_PATH/experimental
+
+#include $PREPROC_RULE_PATH/preprocessor.rules
+#include $PREPROC_RULE_PATH/decoder.rules
+
+包含任意thresholding或者抑制命令，查看：threshold.conf (在<snort src> /etc目录中。命令不需要包含到此conf文件中，分割开使管理更为容易。
+对于windows用户，提醒使用绝对路径，如：
+c:/snort/etc/threshold.conf
+如果需要，请取消注释：
+#include threshold.conf.
