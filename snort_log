@@ -1,0 +1,140 @@
+安装：
+	建议：在安装的过程中把所有需要安装的文件（基本都是压缩包），放在一个文件夹里，比如/usr/local/snort_install，方便进行tar –zxvf以及./configure，make，make install。安装过程需要sudo	
+	安装daq时的./configure会报错。需要把/usr/local/lib下的libqcap.a文件cp到/usr/lib中去。安装好snort后运行会报cant`t find libdnet.1 文件，需要把/usr/local/lib下的libdnet.1文件cp到/usr/lib中。
+	Sudo snort或者到安装路径下./snort –c snort.conf路径名。
+Snort.conf:
+	在安装路径里面的/etc/snort.conf可以找到。是snort的配置文件。
+官方文档里面给出九个步骤：
+1.设置网络变量（具体见mannul使用手册有详细介绍规则编写）README.variables
+a)Ipvar（var是定义变量这里的ip是具体制定定义网段）
+b)ipvar HOME_NET any
+c)ipvar EXTERNAL_NET any
+d)ipvar DNS_SERVERS $HOME_NET
+e)ipvar SMTP_SERVERS $HOME_NET
+f)ipvar HTTP_SERVERS $HOME_NET
+g)ipvar SQL_SERVERS $HOME_NET
+h)ipvar TELNET_SERVERS $HOME_NET
+i)ipvar SSH_SERVERS $HOME_NET
+j)ipvar FTP_SERVERS $HOME_NET
+k)ipvar SIP_SERVERS $HOME_NET
+l)portvar（定义服务端口port变量）
+m)portvar HTTP_PROTS[80,8000:8080]
+n)portvar SHELLCODE_PORTS !80
+o)portvar ORACLE_PORTS 1024:
+p)portvar SSH_PORTS 22
+q)portvar FTP_PORTS [21,2100,3535]
+r)portvar SIP_PORTS [5060,5061,5600]
+s)portvar FILE_DATA_PORTS [$HTTP_PORTS,110,143]
+t)portvar GTP_PORTS [2123,2152,3386]
+u)ipvar AIM_SERVERS [64.12.24.0/23,64.12.28.0/23,64.12.161.0/24,64.12.163.0/24,64.12.200.0/24,205.188.3.0/24,205.188.5.0/24,205.188.7.0/24,205.188.9.0/24,205.188.153.0/24,205.188.179.0/24,205.188.248.0/24]（？）
+v)Path to your rules files配置规则文件路径：var RULE_PATH ../rules
+（把以上所涉及的协议及相关流程原理明白）
+2.Configure the decoder配置解码器README.decode
+a)config disable_decode_alerts
+b)config disable_tcpopt_experimental_alerts
+c)config disable_tcpopt_obsolete_alerts
+d)config disable_tcpopt_ttcp_alerts（T/TCP?）
+e)config disable_tcpopt_alerts
+f)config disable_ipopt_alerts
+g)config enable_decode_oversized_alerts
+h)config enable_decode_oversized_drops
+i)config checksum_mode: all
+j)config flowbits_size: 64	(README.flowbits)
+k)config ignore_ports: tcp 21 6667:6671 1356
+l)config ignore_ports: udp 1:17 53
+m)config response: eth0 attempts 2	(REAMDE.active)
+n)config daq: <type>; config daq_dir: <dir>; config daq_mode: <mode>; 
+config daq_var: <var>;(README.daq)
+# <type> ::= pcap | afpacket | dump | nfq | ipq | ipfw
+# <mode> ::= read-file | passive | inline
+# <var> ::= arbitrary <name>=<value passed to DAQ
+# <dir> ::= path as to where to look for DAQ module so's
+o)snort –h; config set_gid:; config set_uid:
+p)config snaplen(README)
+q)config bpf_file:（-h.-F）；config logdir:（-h,-l）
+3.Configure the base detection engine基本检测引擎(README.decode)
+a)config pcre_match_limit: 3500;config pcre_match_limit_recursion: 1500
+b)config detection: search-method ac-split search-optimize max-pattern-len 20
+c)config event_queue: max_queue 8 log 5 order_events content_length
+(README.event_queue)
+d)config enable_gtp	(README.GTP)
+e)Per packet and rule latency enforcement(README.ppm)
+#config ppm: max-pkt-time 250, \
+#   fastpath-expensive-packets, \
+#   pkt-log
+#config ppm: max-rule-time 200, \
+#   threshold 3, \
+#   suspend-expensive-rules, \
+#   suspend-timeout 20, \
+#   rule-log alert
+f)Configure Perf Profiling for debugging(README.PerfProfiling)
+#config profile_rules: print all, sort avg_ticks
+#config profile_preprocs: print all, sort avg_ticks
+g)Configure protocol aware flushing(README.stream5)
+i.config paf_max: 16000
+4.Configure dynamic loaded libraries配置动态加载库
+a)dynamicpreprocessor directory /usr/local/lib/snort_dynamicpreprocessor/
+b)dynamicengine /usr/local/lib/snort_dynamicengine/libsf_engine.so
+c)dynamicdetection directory /usr/local/lib/snort_dynamicrules
+5.Step #5: Configure preprocessors配置预处理器
+a)preprocessor gtp: ports { 2123 3386 2152 }( README.GTP)
+b)# Does nothing in IDS mode(README.normalize)
+preprocessor normalize_ip4
+preprocessor normalize_tcp: ips ecn stream
+preprocessor normalize_icmp4
+preprocessor normalize_ip6
+preprocessor normalize_icmp6
+c)Target-based IP defragmentation(README.frag3)
+i.preprocessor frag3_global: max_frags 65536
+d)Target-Based stateful inspection/stream reassembly(README.stream5)
+i.preprocessor stream5_global: max_tcp 8192, track_tcp yes, track_dup no.
+ii.preprocessor stream_tcp: policy first
+e)preprocessor perfmonitor: time 300 file /var/snort/snort.stats pktcnt 10000
+性能策略	
+f)HTTP normalization and anomaly detection(README.http_inspect)
+preprocessor http_inspect: global /
+iis_unicode_map unicode.map 1252
+preprocessor http_inspect_server: server default /
+profile all ports {80 8080 8180} oversize_dir_length 500
+g)Preprocessors - RPC Decode; preprocessor rpc_decode: 111 32770 32771 32772 32773 32774 32775 32776 32777 32778 32779 no_alert_multiple_requests no_alert_large_fragments no_alert_incomplete
+h)preprocessor bo(Back Orifice后门)
+i)FTP / Telnet normalization and anomaly detection（README.ftptelnet）
+它查找打破协议数据流标准化的流量，使用标准化的表示取而代之。这样的内容模式匹配关键词可以在不进行修改情况下的工作。
+它同样可以执行协议正确性检测对于FTP命令频道，并鉴定开放的FTP数据转移
+j)SMTP normalization and anomaly detection(README.SMTP)
+这个预处理器通过取出多余的空间来标准化SMTP命令，它会查找过长的命令行，响应行以及数据头行。它会在非法的命令或者指定的合法命令行发出警报。可以有选择的忽略邮件数据，并且可以忽略TLS加密数据。
+k)Portscan detection. (README.sfportscan)
+l)preprocessor sfportscan: proto  { all } memcap { 10000000 } sense_level { low }
+希望检测的协议类型;分配给端口扫描的最大字节数;确定检测端口扫描的敏感度水平;
+m)ARP spoof detection. arp欺骗
+# preprocessor arpspoof
+# preprocessor arpspoof_detect_host: 192.168.40.1 f0:0f:00:f0:0f:00
+检测ARP攻击和单播ARP攻击，并且指定ARP映射监控
+n)SSH anomaly detection(README.ssh)
+SSH 预处理计算传送到服务端的字节数目(CRAuth 和 CRC 32攻击)
+o)SMB / DCE-RPC normalization and anomaly detection(README.dcerpc2)
+p)DNS anomaly detection(README.dns)
+preprocessor dns: ports { 53 } enable_rdata_overflow
+q)SSL anomaly detection and traffic bypass.( README.ssl)
+preprocessor ssl: ports { 443 465 563 636 989 992 993 994 995 7801 7802 7900 7901 7902 7903 7904 7905 7906 7907 7908 7909 7910 7911 7912 7913 7914 7915 7916 7917 7918 7919 7920 }, trustservers, noinspect_encrypted
+r)SDF sensitive data preprocessor.( README.sensitive_data)
+preprocessor sensitive_data: alert_threshold 25
+s)SIP Session Initiation Protocol preprocessor.( README.sip)
+t)IMAP preprocessor.  README.imap
+u)POP preprocessor. README.pop
+v)Modbus preprocessor. README.modbus
+w)DNP3 preprocessor. README.dnp3
+x)Reputation preprocessor. README.reputation
+6.Configure output plugins(配置输出插件)
+a)output unified2: filename merged.log, limit 128, nostamp, mpls_event_types, vlan_event_types
+b)output alert_unified2: filename snort.alert, limit 128, nostamp; 
+output log_unified2: filename snort.log, limit 128, nostamp
+c)output alert_syslog: LOG_AUTH LOG_ALERT
+d)output log_tcpdump: tcpdump.log
+e)include classification.config包含分类和优先设置
+f)include reference.config包含引用系统
+7.Step #7: Customize your rule set自定义规则集
+8.Customize your preprocessor and decoder alerts(README.decoder_preproc_rules)
+定做自己的预处理器和解码报警器
+9.Customize your Shared Object Snort Rules
+http://vrt-blog.snort.org/2009/01/using-vrt-certified-shared-object-rules.html
