@@ -1,7 +1,7 @@
 安装：
 	建议：在安装的过程中把所有需要安装的文件（基本都是压缩包），放在一个文件夹里，比如/usr/local/snort_install，方便进行tar –zxvf以及./configure，make，make install。安装过程需要sudo	
 	安装daq时的./configure会报错。需要把/usr/local/lib下的libqcap.a文件cp到/usr/lib中去。安装好snort后运行会报cant`t find libdnet.1 文件，需要把/usr/local/lib下的libdnet.1文件cp到/usr/lib中。
-	Sudo snort或者到安装路径下./snort –c snort.conf路径名。
+	Sudo snort或者到安装路径下./snort –c snort.conf路径名。默认安装在/usr/local/bin目录下
 Snort.conf:
 	在安装路径里面的/etc/snort.conf可以找到。是snort的配置文件。
 官方文档里面给出九个步骤：
