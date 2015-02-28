@@ -1,1 +1,25 @@
-完成具有基本功能的网络嗅探器
+完成具有基本功能的网络嗅探器。
+参考htttw的专栏。
+1.获取网络接口：char * pcap_lookupdev(char * errbuf)
+2.释放网络接口：void pcap_close(pcap_t * p)
+3.打开网络接口：pcap_t * pcap_open_live(const char * device, int snaplen, int promisc, int to_ms, char * errbuf)
+4.获取数据包：
+              a)u_char * pcap_next(pcap_t * p, struct pcap_pkthdr * h)
+              b)int pcap_loop(pcap_t * p, int cnt, pcap_handler callback, u_char * user)
+              c)int pcap_dispatch(pcap_t * p, int cnt, pcap_handler callback, u_char * user)
+5.分析数据包：
+              a)以太网的流量观察
+              b)对特定端口的观察
+              c)ip地址和数据流
+              d)域名和各种协的表示
+              e)tcp数据的表示
+6.过滤数据包：基于BSD Packet Filter(BPF)结构的。libpcap利用BPF来过滤数据包。
+              a) 构造一个过滤表达式
+              b) 编译这个表达式：int pcap_compile(pcap_t * p, struct bpf_program * fp, char * str, int optimize, bpf_u_int32 netmask)
+              c) 应用这个过滤器:int pcap_setfilter(pcap_t * p,  struct bpf_program * fp)
+7.监视网络： 
+              a)网络负载监
+              b)协议的监视
+              c)应用程序类别的监视
+阅读官方文档；
+
