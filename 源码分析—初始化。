@@ -48,17 +48,29 @@ OpenPcap()函数调用以上所有函数，完成包截获引擎在截获之前�
 注册——初始化——调用
 输出插件注册初始化：（snort运行到InitOutputPlugins()函数时仅仅是注册，当后面进行规则解析时才能“顺便”初始化）
 注册：OutputKeyWordList插件链表的节点，封装了关键字节点。OutputKeywordNode
-注册函数setup又通过调用RegisterOutputPlugin来注册实现，RegisterOutputPlugin负责了链表的搭建，其算法思想是判断链表是否位空，为空则新建链表和头节点，否则在链表尾添加一个新节点，
+注册函数setup又通过调用RegisterOutputPlugin来注册实现，RegisterOutputPlugin负责了链表的搭建，其算法思想是判断链表是否位空
+		，为空则新建链表和头节点，否则在链表尾添加一个新节点，
 初始化函数：
 	读取相关插件的配置参数
 	将插件名和实际处理函数建立到一个链表中，以供系统后面调用。输出插件有两个链表LOG和ALERT
 规则字符串查找分析：主函数通过调用规则拆分函数ParseRule来读取snort.conf相关配置语句，实现输出插件初始化相关工作。
-规则配置及字符串拆分：ParseOutputPlugin函数是完成输出插件初始化的主要函数。mSplit函数：用于字符串的拆分，GetOutputPlugin函数用于从输出插件注册链表中获取与当前插件名对应的节点。
+规则配置及字符串拆分：ParseOutputPlugin函数是完成输出插件初始化的主要函数。mSplit函数：用于字符串的拆分，
+			GetOutputPlugin函数用于从输出插件注册链表中获取与当前插件名对应的节点。
 初始化函数：Syslog插件
-预处理插件初始化：数据包在进入检测引擎之前，对其进行前期的一些处理
+预处理插件初始化：数据包在进入检测引擎之前，对其进行前期的一些处理。（过程和输出插件差不多）
 	分片的数据包需要重组
 	HTTP请求的URL字符串需要统一格式化
 	需要识别扫描探测等行为
 PreprocessKeywordlist：封装了关键字节点PreprocessNode
 注册：主函数调用InitPreprocessors （plugbase.c）函数进行预处理插件的初始化。
+	函数每次调用setup××函数来实现每一个对应的预处理插件的初始化。注册的基本思想是将关键字名相应的处理函数进行绑定
+	再构建链表。每一个setup××函数都是通过调用了RegisterPreprocessor函数来实现注册的，其两个参数分别表示插件名和
+	对应的处理函数。
+初始化：1.主函数用ParseRuleFile，从snort.conf配置文件中一行一行的读取配置参数，交于ParseRule函数进一步拆分
+	2.ParseRule函数分析每一行的配置，判断配置的类型，若是预处理插件的配置，则调用ParsePreprocessor
+	进一步分析预处理插件的配置
+	3.ParsePreprocessor（parser.c）函数将取出配置文件中使用的预处理插件的插件名字关键字，然后遍历注册时建立的链表
+
+
+
 
