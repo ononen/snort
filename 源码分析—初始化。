@@ -55,8 +55,10 @@ OpenPcap()函数调用以上所有函数，完成包截获引擎在截获之前�
 规则字符串查找分析：主函数通过调用规则拆分函数ParseRule来读取snort.conf相关配置语句，实现输出插件初始化相关工作。
 规则配置及字符串拆分：ParseOutputPlugin函数是完成输出插件初始化的主要函数。mSplit函数：用于字符串的拆分，GetOutputPlugin函数用于从输出插件注册链表中获取与当前插件名对应的节点。
 初始化函数：Syslog插件
- 预处理插件初始化：数据包在进入检测引擎之前，对其进行前期的一些处理
+预处理插件初始化：数据包在进入检测引擎之前，对其进行前期的一些处理
 	分片的数据包需要重组
 	HTTP请求的URL字符串需要统一格式化
 	需要识别扫描探测等行为
 PreprocessKeywordlist：封装了关键字节点PreprocessNode
+注册：主函数调用InitPreprocessors （plugbase.c）函数进行预处理插件的初始化。
+
