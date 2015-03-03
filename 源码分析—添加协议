@@ -30,6 +30,33 @@ b）数据包处理
         调用fpSetDetectionOption函数，将值传递给定义于fpDetect.c中的fpDetect
 命令行初始化：
 
-
-
-
+命令行解析
+ParseCmdLine函数中while/switch/case，其利用getopt()循环分析读取命令行参数，交于ch进行匹配。
+打开数据截获接口：
+libpcap库函数：
+	pcap_lookupdev( )：查找第一个可以使用的网络适配器
+	pcap_open_live( )：获取适配器的描述信息
+	pcap_open_live( )：打开网卡
+	pcap_open_offline( )：从文件读取数据包
+	pcap_snapshot( )：获取数据链路层的类型
+	pcap_compile( )，pcap_setfilter( )：设置过滤规则
+	pcap_loop( )：捕获数据包
+OpenPcap()函数调用以上所有函数，完成包截获引擎在截获之前的所有工作。
+	1.Snort数据包的获得有两种来源：从网络或文件中获取。
+	2.snaplen = pcap_snapshot(pd);后面，主函数会调用SetPktProcessor函数来根据snaplen的值判断该调用何种对应的拆包函数。
+插件初始化：日志输出插件，预处理插件，检测插件。链表来处理
+注册——初始化——调用
+输出插件注册初始化：（snort运行到InitOutputPlugins()函数时仅仅是注册，当后面进行规则解析时才能“顺便”初始化）
+注册：OutputKeyWordList插件链表的节点，封装了关键字节点。OutputKeywordNode
+注册函数setup又通过调用RegisterOutputPlugin来注册实现，RegisterOutputPlugin负责了链表的搭建，其算法思想是判断链表是否位空，为空则新建链表和头节点，否则在链表尾添加一个新节点，
+初始化函数：
+	读取相关插件的配置参数
+	将插件名和实际处理函数建立到一个链表中，以供系统后面调用。输出插件有两个链表LOG和ALERT
+规则字符串查找分析：主函数通过调用规则拆分函数ParseRule来读取snort.conf相关配置语句，实现输出插件初始化相关工作。
+规则配置及字符串拆分：ParseOutputPlugin函数是完成输出插件初始化的主要函数。mSplit函数：用于字符串的拆分，GetOutputPlugin函数用于从输出插件注册链表中获取与当前插件名对应的节点。
+初始化函数：Syslog插件
+ 预处理插件初始化：数据包在进入检测引擎之前，对其进行前期的一些处理
+	分片的数据包需要重组
+	HTTP请求的URL字符串需要统一格式化
+	需要识别扫描探测等行为
+PreprocessKeywordlist：封装了关键字节点PreprocessNode
