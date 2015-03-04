@@ -86,8 +86,14 @@ InitPlugIns函数注册（与前面相似）setup××——RegisterPlugin
 而且如果数据包于规则相匹配需要输出的话还要调用对应的输出插件。即位第二层数据结构，ListHead。规则头除了包含动作、协议外，
 还有在此协议下的地址、端口、数据流方向等，于是加上一些控制标志，即为第三层链表节点RuleTreeNode（RTN）。RTN用Right来指向下一个节点，
 down指向第四层的数据节点：规则节点选项OptTreeNode（OTN）。
-
-
+规则初始化流程：CreateDefaultRules函数完成第一层链表的搭建。ParseRuleFile读取snort.conf等配置文件，将配置文件一行一行送往
+ParseRule解析，交回文件名，两个函数反复回调，完成规则的初始化过程。
+CreateDefaultRules搭建最上层链表通过五次调用CreateRuleType函数实现。CreateRuleType函数负责链表的具体实现。
+ParseRule函数打开参数char *file指向的文件，然后一行一行的读取文件，再交由后续函数处理。
+ParseRule :
+	函数负责将上层函数ParseRuleFile传递过来的一行字符串进行进一步分解，提出指令类型，再进一步判断，调用相应的处理函数。
+获取规则类型RuleType——属于检测规则类型？——处理规则头ProcessHeadNode——ProcessRuleOption
+				——调用对应的解析模块——ParsePreprocesstor,ParseOutPutPlugins,ParseConfig,ParseRuleTypeDeclaration
 
 
 
