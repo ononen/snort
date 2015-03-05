@@ -94,7 +94,9 @@ ParseRule :
 	函数负责将上层函数ParseRuleFile传递过来的一行字符串进行进一步分解，提出指令类型，再进一步判断，调用相应的处理函数。
 获取规则类型RuleType——属于检测规则类型？——处理规则头ProcessHeadNode——ProcessRuleOption
 				——调用对应的解析模块——ParsePreprocesstor,ParseOutPutPlugins,ParseConfig,ParseRuleTypeDeclaration
-
+函数ParseRule在进行规则头的IP地址处理的时候，调用了ProcessIP函数来向RTN填充源/目的ip地址及掩码的信息。ProcessIP函数
+将规则头中IP地址信息的集中相关字符串分别一一进行处理。
+函数ParsePort用于拆分规则头中的端口子串，将分析后的结果填充RTN结构的相应成员变量。
 
 
 
