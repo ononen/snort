@@ -1,3 +1,18 @@
 InterfaceThread：
   系统在所有初始化工作完成以后，就进入了数据包处理阶段，完成这一阶段的任务是通过主函数在末尾调用InterfaceThread函数实现。
 数据包的处理主要包括截获、拆包、预处插件处理、检测引擎匹配、输出插件的日志输出。
+数据包处理是调用LibPcap的库函数pcap_loop来实现，截取后的数据包，都是由回调函数ProcessPacket来处理。
+ProcessPacket：
+  1.完成了数据包的初步处理，如累加计数
+  2.数据包解码
+  3.如果需要输出到屏幕，则调用相应的Print输出函数
+  4.如果是日志记录模式，则调用相应输出插件
+  5.如果是IDS模式，则调用Preprocess进行检测
+数据包终端输出模块一共支持IP，ARP，Eapol，Wifi四种协议。
+IP包输出流程：PrintIPPkt首先根据pv.show2hdr_flag标志来决定是否需要调用Print2ndHeader输出第二层的相关信息，然后再调用
+              PrintIPHeader输出IP包头，最后判断高层协议是TCP/UDP/ICMP，调用相应的输出函数处理。
+Print2ndHeader：输出链路层信息。首先利用datalink（OpenPcap函数中赋值）的值判断数据链路层协议（Ethernet ，IEEE802_11， 
+                Token Ring ，Linux cooked，sockets），调用相应的输出函数处理。
+日志记录模式：输出链表共有两条：LogList（日志）AlertLis（报警）。
+              CallLogPlugins：主要遍历LogList的所有注册的功能函数，实现日志的输出。
+Preprocess函数处理整个数据检测及处理流程。主要处理“预处理——检测——输出”。      
