@@ -1,6 +1,6 @@
 InterfaceThread：
   系统在所有初始化工作完成以后，就进入了数据包处理阶段，完成这一阶段的任务是通过主函数在末尾调用InterfaceThread函数实现。
-数据包的处理主要包括截获、拆包、预处插件处理、检测引擎匹配、输出插件的日志输出。
+数据包的处理主要包括截获、拆包、预处理插件处理、检测引擎匹配、输出插件的日志输出。
 数据包处理是调用LibPcap的库函数pcap_loop来实现，截取后的数据包，都是由回调函数ProcessPacket来处理。
 ProcessPacket：
   1.完成了数据包的初步处理，如累加计数
@@ -16,3 +16,28 @@ Print2ndHeader：输出链路层信息。首先利用datalink（OpenPcap函数�
 日志记录模式：输出链表共有两条：LogList（日志）AlertLis（报警）。
               CallLogPlugins：主要遍历LogList的所有注册的功能函数，实现日志的输出。
 Preprocess函数处理整个数据检测及处理流程。主要处理“预处理——检测——输出”。      
+数据包解码引擎：
+  1.系统在OpenPcap函数中，利用snaplen = pcap_snapshot(pd)获取了数据链路层的值，然后在主函数中调用SetPktProcessor进行
+  解码函数的关联处理。SetPktProcessor函数的主要处理流程是利用switch case语句，判断snaplen的值，然后将函数指针指向对应
+  的实际解函数。
+  2.数据包解码引擎解后的结果全部放在Packet *p中。
+在grinder指向了实际的解码函数以后，ProcessPacket函数就调用（*grinder）(&p,pkthdr,pkt)进入解码引擎。（decode.c）
+以太网拆包（拆解以太网——拆解IP包——拆解TCP/UDP/ICMP）：
+DecodeEthPkt：主要功能拆解以太网封包，以太网包头只有十四个字节：6字节目的地址值，6字节源地址，2字节上层协议地址值。
+DecodeIP：拆解IP包，与上相似。IPHdr：IP封包格式。如果是一个分片包，则在进行了标志位计算，设置，计数器的设置后，根据
+          p->frag_flag分片标志位，不再进行上层协议的拆包。
+          Snort专门有一个用于分片重组的预处理插件frag2，分片包进入frag2进行重组完成后在其RebuildFrag函数中会调用
+          ProcessPacket函数重新进入数据包处理模块，再次进入解码引擎。
+DecodeTCP：TCPHdr：TCP包头结构。
+预处理插件的具体实现：
+  Stream4：状态维护和会话重组
+  Frag2：分片重组和攻击检测
+  Postscan：端口扫描
+  BO：bo后门
+  Arpspoof：反ARP欺骗
+Frag2：将所有分重组构造成一个包含完整信息的包，再将这个包传给检测引擎。还可以检测基于分片的默写DoS攻击，如teardrop。
+      其 使用Frag2Data结构来存储当前模块的参数配置情况，此结构已经在frag2的初始化函数中设置了相应的值。
+Frag2数据结构是二维的：第一维用来存储数据包的特征，如地址端口协议ID等，第二维用来存储该数据包对应的所有分片。是一个
+                      两级的二叉树：主二叉树和二级二叉树。主二叉树存数据包信息，每个节点都指向一个FragTracker结构。
+                      
+                      
