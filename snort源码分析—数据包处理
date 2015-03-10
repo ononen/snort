@@ -60,6 +60,27 @@ Snort检测ARP欺骗的算法：在Snort.conf中建立一个MAC-IP的对照表�
                         然后把实际的包中的地址信息与对照表中的地址信息作比较，不一致，则发生了ARP欺骗。
     ARPspoofInit
     ARPspoofHostInit
-ARPspoofInit：读出MAC-IP表：ParseARPspoofHostArgs将定义的参数读取出来，填充ipmel链表。DetectARPattacks检测/
+ARPspoofInit：读出MAC-IP表：ParseARPspoofHostArgs将定义的参数读取出来，填充ipmel链表。DetectARPattacks检测。
+数据包检测引擎：
+Detect函数是检测引擎的入口，在函数preprocess中通过调用Detect函数进入实际的数据包检测，Detect调用fpEvalPacket函数
+进入多模式匹配引擎。
+fpEvalPacket函数是检测引擎的接口，主要是判断待检测的数据包是TCP、UDP、ICMP还是IP包，然后调用相应的fpEvalHeaderXXX
+检测函数。共有四个检测函数，流程相似。
+fpEvalHeaderTcp：将该数据包与规则子集合进行匹配。函数首先调用prmFindRuleGroupTcp函数取得适合当前规则的子集合，然后
+调用InitMatchInfo函数对初始化模块进行进一步优化，最后调用fpEvalHeaderSW函数进入多模式搜索匹配工作引擎。
+prmFindRuleGroupTCP：查找与当前待检测的TCP数据包相匹配的规则子集合，查找算法是根据建立规则快速匹配引擎时的划分依据。
+其转向调用prmFindRuleGroup函数在全局变量prmTcpRTNX中查找。prmFindRuleGroup用于查找与此数据包匹配的规则子集合。
+InitMatchInfo中重要的变量omd，结构主要用于记录在整个数据包匹配期间涉及到的相关信息。static OTNX_MATCH_DATA omd
+fpEvalHeaderSW：引入了多模式搜索匹配工作引擎，另外加强了对TCP流状态的处理。
+系统经过前面处理，根据协议、端口查找到了被检测数据包对应的根据端口划分的规则子集合。对于每一类规则子集合（PORT_GROUP）
+包含了三类节点：包含content，包含uricontent和没有包含content的规则节点。所以，对一个数据包来讲，需对这三类规则节点逐一匹配。
+mpseSearch：进行uri-content 或content模式匹配。
+fpEvalOTN：实现对规则链表OTN节点的匹配，判断是否存在与当前数据包匹配的规则，对于这些选项关键字的匹配，主要是依靠这些
+关键字的检测插件来实现的。OTN节点匹配后，会调用fpEvalRTN函数进一步进行RTN节点的匹配。
+检测事件的输出：从检测引擎中输出，留待输出插件调用。omd。fpAddMatch fpFinalSelectEvent SnortEventqAdd
+系统在检测完成后，首先会调用fpAddMatch来将事件添加进适当的匹配队列：Alter、Pass、Log。
+FpFinalSelectEvent：遍历omd，输出所有事件队列。
+
+
 
                 
