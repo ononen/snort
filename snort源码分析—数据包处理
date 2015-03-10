@@ -80,7 +80,18 @@ fpEvalOTN：实现对规则链表OTN节点的匹配，判断是否存在与当�
 检测事件的输出：从检测引擎中输出，留待输出插件调用。omd。fpAddMatch fpFinalSelectEvent SnortEventqAdd
 系统在检测完成后，首先会调用fpAddMatch来将事件添加进适当的匹配队列：Alter、Pass、Log。
 FpFinalSelectEvent：遍历omd，输出所有事件队列。
-
-
+SnortEventqAdd：添加一个报警事件。参数为事件信息和一个otnx变量。事件信息被定义为一个SigInfo结构。SnortEventqAdd函数
+主要是把上层函数传递过来的相关信息赋给EventNode类型的变量en，再由sfeventq_add函数负责来添加。
+sfeventq_add：事件的组织采用的是双向链表，链表头是全局变量s_eventq。
+规则链表头的检测函数：
+RTN的检测函数的作用是做地址、端口、方向等的检测配置。
+	CheckBidirectional：如果规则中设置了双向地址操作标识，检查IP地址和端口值的匹配情况
+	CheckSrcPortNotEq：检测当前规则链表头结构中的源端口是否与数据包中源端口不相等
+	CheckDstPortNotEq：检测当前规则链表头结构中的目的端口是否与数据包中目的端口不相等
+	CheckSrcPortEqual：检测当前规则链表头结构中的源端口是否与数据包中源端口相等
+	CheckDstPortEqual：检测当前规则链表头结构中的目的端口是否与数据包中目的端口相等
+	CheckSrcIP：检测来源IP地址
+	CheckDstIP：检测目的IP地址
+CheckBidirectional：在设置了双向操作标识符的情况下，分别检测源IP地址和端口值的匹配情况。	
 
                 
