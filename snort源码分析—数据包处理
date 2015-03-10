@@ -40,4 +40,26 @@ Frag2：将所有分重组构造成一个包含完整信息的包，再将这个
 Frag2数据结构是二维的：第一维用来存储数据包的特征，如地址端口协议ID等，第二维用来存储该数据包对应的所有分片。是一个
                       两级的二叉树：主二叉树和二级二叉树。主二叉树存数据包信息，每个节点都指向一个FragTracker结构。
                       
-                      
+主二叉树的每一个节点对应结构ubi_trNode，节点指向一个FragTracker结构，主二叉树通过其中的fraglist和fraglistPtr字段
+来管理二级二叉树。二级二叉树的每个节点又都指向了一个Frag2Tracker结构。
+Frag2对于新来的分片数据包，判断它对应的特征是否匹配主二叉树的节点，匹配则加入其二级二叉树，否则则为一个新的分片，
+就为它分配一个对应的主二叉树节点，再把这个分片的信息加入这个新节点的第一个分片。而数据包的重组则是判断二级二叉树
+是否已完整的收集了该数据包的所有分片。
+frag2的主要功能模块主要通过Frag2Defrag函数实现。
+	GetFragTracker：检查该分片包的特征是否已经在主二叉树上存在
+	NewFragTracker分配一个新的主二叉树节点
+	Insert2Flag：插入分片包至二级二叉树
+	FragIsComplete：某一个数据包的所有分片是否已经接收完成
+	RebuildFrag：重组数据包
+GetFragTraker：通过调用ubi_sptFind函数来实现判断，函数层层调用，具体遍历主二叉树是在函数qFind中实现。                      
+NewFragTracker：首先调用Frag2Alloc来为主二叉树分配一个节点空间，然后将当前包的地址、协议、ID等信息赋给Frag2Tracker
+                结构的相应变量，接着调用ubi_trInitTree函数初始化ubi_btRoot结构，这里关联了节点比较函数RootPtr->cmp
+                = CompFunc；这样节点建立好以后，由InsertFrag把当前分片包的分片信息写入已经分配了的节点对应的
+                二级二叉树中。插入节点最重要的是遍历二叉树，TreeFind。
+Snort检测ARP欺骗的算法：在Snort.conf中建立一个MAC-IP的对照表，收集所有的ARP请求包和应答包，先判断这些包的合法性，
+                        然后把实际的包中的地址信息与对照表中的地址信息作比较，不一致，则发生了ARP欺骗。
+    ARPspoofInit
+    ARPspoofHostInit
+ARPspoofInit：读出MAC-IP表：ParseARPspoofHostArgs将定义的参数读取出来，填充ipmel链表。DetectARPattacks检测/
+
+                
