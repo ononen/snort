@@ -1,0 +1,329 @@
+迅雷计算用户积分的方法有两种,下面是官方的描述
+/*
+(2) 注册用户积分计算公式：
+
+在线时长积分＋下载文件量积分＝累计积分
+
+说明：
+注册用户（雷友）在线 1 小时得 2 分，下载一个文件得 5 分；
+■注册用户（雷友）在线时长得分每天封顶 20 分，下载文件得分每天封顶 50 分；
+■注册用户（雷友）累计积分和级别一一对应，到达规定积分就可以升级（晋阶）。
+*/
+
+补充一点,下载文件的数量是服务器那边管理的
+
+这里就直接给出结果了,至于怎么利用下面这些数据,各位充分发挥想象力吧
+
+
+======================================================================登陆验证
+<--TCP!来源标识.Data(53 Bytes)
+                         00 00 00 35 00 00 00 4d 00 00  .........5...M..
+0040   00 4d 00 00 00 24 65 30 31 37 39 34 64 63 2d 33  .M...$e01794dc-3
+0050   61 36 62 2d 34 32 39 39 2d 39 64 33 61 2d 37 38  a6b-4299-9d3a-78
+0060   36 66 64 33 39 36 65 61 39 36 00                 6fd396ea96.
+
+[结构]
+00 00 00 35        数据包长度
+00 00 00 4d        将要发送的'发送验证信息.Data'数据包的长度
+00 00 00 4d        将要发送的'发送验证信息.Data'数据包的长度
+00 00 00 24        标识串长度-1(末位的空字节)
+65 30 31 ... 39 36 00  标识串.这个字符串每次程序启动后不一样,程序重新启动前一直沿用.与用户标识无关
+
+
+
+<--TCP!发送验证信息.Data(77 Bytes)
+                         00 00 00 0e 00 00 00 05 00 00  ................
+0040   00 41 00 00 00 0b 51 55 45 52 59 41 55 54 48 45  .A....QUERYAUTHE
+0050   4e 00 00 00 00 09 6d 61 78 6c 65 76 65 6c 34 00  N.....maxlevel4.
+0060   00 00 20 30 34 62 64 64 64 31 37 63 31 36 33 32  .. 04bddd17c1632
+0070   37 35 38 39 63 65 33 66 65 65 30 65 34 31 39 62  7589ce3fee0e419b
+0080   36 33 33                                         633
+
+[结构]
+00 00 00 0e              未知,固定不变(猜测与版本有关,未经验证)
+00 00 00 03              程序启动时初始化为0,第一次用户登陆+3,其余每次用户登陆+4
+00 00 00 41              下面的数据长度
+00 00 00 0b              标识"QUERYAUTHEN"的长度-1(末位的空字节)
+51 55 45 52 59 41 55 54 48 45 4e 00  标识"QUERYAUTHEN"
+00 00 00 09              用户名长度
+6d 61 78 6c 65 76 65 6c 34      用户名
+00 00 00 20              密码hash的长度
+30 34 62 ... 36 33 33        密码的hash
+======================================================================登陆验证END
+
+
+
+======================================================================维持用户在线状态
+<--UDP!Data(73 Bytes)
+                                     00 00 00 0e 00 00  .|.S.8.Q.'......
+0030   00 07 00 00 00 3d 00 00 00 04 50 49 4e 47 00 00  .....=....PING..
+0040   00 08 33 39 32 36 36 39 38 37 00 00 00 24 37 61  ..39266987...$7a
+0050   66 61 33 38 30 66 2d 34 32 36 37 2d 34 35 39 61  fa380f-4267-459a
+0060   2d 39 62 30 31 2d 66 30 39 35 63 37 36 37 61 30  -9b01-f095c767a0
+0070   37 32 00                                         72.
+
+[结构]
+00 00 00 0e          未知,固定不变(猜测与版本有关,未经验证)
+00 00 00 07          所发送的此数据包的计数
+00 00 00 3d          后面的数据长度
+00 00 00 04          标识"PING"的长度
+50 49 4e 47          标识"PING"
+00 00 00 08          用户id长度
+33 39 32 36 36 39 38 37    用户id字符串
+00 00 00 24          标识串长度-1(末位的空字节)
+37 61 66 ... 37 32 00    标识串
+======================================================================维持用户在线状态END
+
+
+
+======================================================================下载文件后加积分
+<--TCP!来源验证.Data(53 Bytes)
+                         00 00 00 35 00 00 00 39 00 00  Dp.......5...9..
+0040   00 39 00 00 00 24 64 34 38 62 36 63 31 33 2d 38  .9...$d48b6c13-8
+0050   62 62 34 2d 34 34 39 38 2d 38 65 36 31 2d 32 37  bb4-4498-8e61-27
+0060   31 36 35 66 35 66 65 63 35 38 00                 165f5fec58.
+
+[结构]
+00 00 00 35        数据包长度
+00 00 00 39        将要发送的'下载加积分.Data'数据包的长度
+00 00 00 39        将要发送的'下载加积分.Data'数据包的长度
+00 00 00 24        标识串长度
+64 34 38 ... 35 38 00  标识串
+
+
+
+<--TCP!下载加积分.Data(57 Bytes)
+                         00 00 00 0e 00 00 00 0f 00 00  Dp..............
+0040   00 2d 00 00 00 0d 51 55 45 52 59 44 4f 57 4e 4d  .-....QUERYDOWNM
+0050   45 53 53 00 00 00 08 33 38 39 32 33 37 37 32 00  ESS....38923772.
+0060   00 00 00 00 72 7e 98 00 00 00 00 00 00 01 54     ....r~........T
+
+[结构]
+00 00 00 0e                未知,固定不变(猜测与版本有关,未经验证)
+00 00 00 0f                程序启动时初始化为0.每个用户登陆后下载完第一个文件+5,第一个以后的文件+1.换其他用户登陆,也是下载完第一个文件+5,后面的+1.用户注销后再登陆的情况下下载完第一个也+5
+00 00 00 2d                以下数据的长度
+00 00 00 0d                "QUERYDOWNMESS"的长度
+51 55 45 52 59 44 4f 57 4e 4d 45 53 53  "QUERYDOWNMESS"
+00 00 00 08                用户id("38923772")的长度
+33 38 39 32 33 37 37 32          用户id("38923772")
+00 00 00 00 00 72 7e 98          所下载完的文件的hash
+00 00 00 00 00 00 01 54          未知,但不像是随机
+======================================================================下载文件后加积分END
+
+
+
+======================================================================注销
+<--TCP!来源验证.Data(53 Bytes)
+                         00 00 00 35 00 00 00 2b 00 00  .........5...+..
+0040   00 2b 00 00 00 24 31 32 63 39 32 61 34 62 2d 34  .+...$12c92a4b-4
+0050   64 36 66 2d 34 61 62 64 2d 61 66 65 62 2d 37 31  d6f-4abd-afeb-71
+0060   37 63 39 39 33 62 32 62 35 34 00                 7c993b2b54.
+
+[结构]
+00 00 00 35        此数据包长度
+00 00 00 2b        将要发送的'下载加积分.Data'数据包的长度
+00 00 00 2b        将要发送的'下载加积分.Data'数据包的长度
+00 00 00 24        标识串长度
+31 32 63 ... 35 34 00  标识串
+
+
+
+<--TCP!发送注销信息.Data(43 Bytes)
+                         00 00 00 0e 00 00 00 05 00 00  ................
+0040   00 1f 00 00 00 0b 51 55 45 52 59 4c 4f 47 4f 55  ......QUERYLOGOU
+0050   54 00 00 00 08 32 32 39 30 30 31 35 37 00 00 00  T....22900157...
+0060   00                                               .
+
+[结构]
+00 00 00 0e              未知,固定不变(猜测与版本有关,未经验证)
+00 00 00 05              程序启动时初始化为0,第一次用户注销后+5,其余每次有用户注销则+4
+00 00 00 1f              以下数据的长度
+00 00 00 0b              标识"QUERYLOGOUT"的长度
+51 55 45 52 59 4c 4f 47 4f 55 54  标识"QUERYLOGOUT"
+00 00 00 08              用户id的长度
+32 32 39 30 30 31 35 37        用户id
+00 00 00 00              空
+======================================================================注销END
+
+
+其中上面列出来的第一个包中密码hash看似是md5,直接把我的密码的md5算出来对比了一下,不一样,那就跟一下吧,打开od,立马定位到这里
+
+215C4D60 > $  55            push    ebp
+215C4D61   .  8BEC          mov     ebp, esp
+215C4D63   .  6A FF         push    -1
+215C4D65   .  68 85C65E21   push    <loc_215EC685>                   ;  SE handler installation
+215C4D6A   .  64:A1 0000000>mov     eax, dword ptr fs:[0]
+215C4D70 > .  50            push    eax
+215C4D71   .  64:8925 00000>mov     dword ptr fs:[0], esp
+215C4D78   .  81EC B8080000 sub     esp, 8B8
+215C4D7E   .  53            push    ebx
+215C4D7F   .  56            push    esi
+215C4D80 > .  57            push    edi
+215C4D81   .  8BD9          mov     ebx, ecx
+215C4D83   .  8965 F0       mov     dword ptr [ebp-10], esp
+215C4D86   .  895D E0       mov     dword ptr [ebp-20], ebx
+215C4D89   .  8B75 08       mov     esi, dword ptr [ebp+8]
+215C4D8C   .  33C0          xor     eax, eax
+215C4D8E      89            db      89
+215C4D8F   .  45            inc     ebp
+215C4D90 > .  FC            cld
+215C4D91   .  8945 EC       mov     dword ptr [ebp-14], eax
+215C4D94   .  8973 24       mov     dword ptr [ebx+24], esi
+215C4D97   .  8A06          mov     al, byte ptr [esi]
+215C4D99   .  84C0          test    al, al
+215C4D9B   .  C645 FC 01    mov     byte ptr [ebp-4], 1
+215C4D9F   .  0F85 8C010000 jnz     <loc_215C4F31>
+215C4DA5   .  8D8D 3CF7FFFF lea     ecx, dword ptr [ebp-8C4]
+215C4DAB   .  E8 90E80000   call    <sub_215D3640>
+215C4DB0   .  B9 08000000   mov     ecx, 8
+215C4DB5   .  33C0          xor     eax, eax
+215C4DB7   .  8DBD 7CFFFFFF lea     edi, dword ptr [ebp-84]
+215C4DBD   .  8B53 24       mov     edx, dword ptr [ebx+24]
+215C4DC0   .  F3:AB         rep     stos dword ptr es:[edi]
+215C4DC2   .  66:AB         stos    word ptr es:[edi]
+215C4DC4   .  AA            stos    byte ptr es:[edi]
+215C4DC5   .  8B7A 38       mov     edi, dword ptr [edx+38]
+215C4DC8   .  B9 32000000   mov     ecx, 32
+215C4DCD   .  2BCF          sub     ecx, edi
+215C4DCF   .  33C0          xor     eax, eax
+215C4DD1   .  8D7C3A 3C     lea     edi, dword ptr [edx+edi+3C]
+215C4DD5   .  8BD1          mov     edx, ecx
+215C4DD7   .  C1E9 02       shr     ecx, 2
+215C4DDA   .  F3:AB         rep     stos dword ptr es:[edi]
+215C4DDC   .  8BCA          mov     ecx, edx
+215C4DDE   .  C645 FC 02    mov     byte ptr [ebp-4], 2
+215C4DE2   .  83E1 03       and     ecx, 3
+215C4DE5   .  F3:AA         rep     stos byte ptr es:[edi]
+215C4DE7   .  8B53 24       mov     edx, dword ptr [ebx+24]
+215C4DEA   .  B9 32000000   mov     ecx, 32
+215C4DEF   .  33C0          xor     eax, eax
+215C4DF1   .  8B7A 02       mov     edi, dword ptr [edx+2]
+215C4DF4   .  2BCF          sub     ecx, edi
+215C4DF6   .  8D7C3A 06     lea     edi, dword ptr [edx+edi+6]
+215C4DFA   .  8BD1          mov     edx, ecx
+215C4DFC   .  C1E9 02       shr     ecx, 2
+215C4DFF   .  F3:AB         rep     stos dword ptr es:[edi]
+215C4E01   .  8BCA          mov     ecx, edx
+215C4E03   .  83E1 03       and     ecx, 3
+215C4E06   .  F3:AA         rep     stos byte ptr es:[edi]
+215C4E08   .  8D46 3C       lea     eax, dword ptr [esi+3C]
+215C4E0B   .  8D8D 3CF7FFFF lea     ecx, dword ptr [ebp-8C4]
+215C4E11   .  50            push    eax                              ;  用户密码
+215C4E12   .  E8 D9E80000   call    <sub_215D36F0>                   ;  跟入
+
+
+跟入后来到这里
+
+215D36F0 >/$  56            push    esi
+215D36F1  |.  8BF1          mov     esi, ecx
+215D36F3  |.  E8 28000000   call    <sub_215D3720>
+215D36F8  |.  84C0          test    al, al
+215D36FA  |.  75 09         jnz     short <loc_215D3705>
+215D36FC  |.  6A 01         push    1
+215D36FE  |.  8BCE          mov     ecx, esi
+215D3700  |.  E8 4B0C0000   call    <sub_215D4350>
+215D3705 >|>  8B4424 08     mov     eax, dword ptr [esp+8]
+215D3709  |.  8BCE          mov     ecx, esi
+215D370B  |.  50            push    eax
+215D370C  |.  E8 AF0B0000   call    <sub_215D42C0>                   ;  跟入
+215D3711  |.  5E            pop     esi
+215D3712  \.  C2 0400       retn    4
+
+
+
+跟到这里
+
+215D42C0 >/$  53            push    ebx
+215D42C1  |.  55            push    ebp
+215D42C2  |.  56            push    esi
+215D42C3  |.  8B7424 10     mov     esi, dword ptr [esp+10]
+215D42C7  |.  8BD9          mov     ebx, ecx
+215D42C9  |.  57            push    edi
+215D42CA  |.  8BFE          mov     edi, esi
+215D42CC  |.  83C9 FF       or      ecx, FFFFFFFF
+215D42CF  |.  33C0          xor     eax, eax
+215D42D1  |.  F2:AE         repne   scas byte ptr es:[edi]
+215D42D3  |.  F7D1          not     ecx
+215D42D5  |.  49            dec     ecx
+215D42D6  |.  8BD1          mov     edx, ecx
+215D42D8  |.  8BC2          mov     eax, edx
+215D42DA  |.  8BEA          mov     ebp, edx
+215D42DC  |.  C1E8 06       shr     eax, 6
+215D42DF  |.  83E5 3F       and     ebp, 3F
+215D42E2  |.  895424 14     mov     dword ptr [esp+14], edx
+215D42E6  |.  85C0          test    eax, eax
+215D42E8  |.  76 19         jbe     short <loc_215D4303>
+215D42EA  |.  8BF8          mov     edi, eax
+215D42EC >|>  8BCB          /mov     ecx, ebx
+215D42EE  |.  E8 EDF4FFFF   |call    <sub_215D37E0>
+215D42F3  |.  8B4B 64       |mov     ecx, dword ptr [ebx+64]
+215D42F6  |.  83C1 40       |add     ecx, 40
+215D42F9  |.  4F            |dec     edi
+215D42FA  |.  894B 64       |mov     dword ptr [ebx+64], ecx
+215D42FD  |.^ 75 ED         \jnz     short <loc_215D42EC>
+215D42FF  |.  8B5424 14     mov     edx, dword ptr [esp+14]
+215D4303 >|>  8B7B 68       mov     edi, dword ptr [ebx+68]
+215D4306  |.  B9 10000000   mov     ecx, 10
+215D430B  |.  33C0          xor     eax, eax
+215D430D  |.  F3:AB         rep     stos dword ptr es:[edi]
+215D430F  |.  8B7B 68       mov     edi, dword ptr [ebx+68]
+215D4312  |.  8BCD          mov     ecx, ebp
+215D4314  |.  8BC1          mov     eax, ecx
+215D4316  |.  C1E9 02       shr     ecx, 2
+215D4319  |.  F3:A5         rep     movs dword ptr es:[edi], dword p>
+215D431B  |.  8BC8          mov     ecx, eax
+215D431D  |.  83E1 03       and     ecx, 3
+215D4320  |.  F3:A4         rep     movs byte ptr es:[edi], byte ptr>
+215D4322  |.  8B4B 68       mov     ecx, dword ptr [ebx+68]
+215D4325  |.  C1E2 03       shl     edx, 3
+215D4328  |.  C60429 80     mov     byte ptr [ecx+ebp], 80
+215D432C  |.  8B43 68       mov     eax, dword ptr [ebx+68]
+215D432F  |.  8BCB          mov     ecx, ebx
+215D4331  |.  8950 38       mov     dword ptr [eax+38], edx
+215D4334  |.  C740 3C 00000>mov     dword ptr [eax+3C], 0
+215D433B  |.  E8 A0F4FFFF   call    <sub_215D37E0>                   ;  这里就是关键的md5了
+215D4340  |.  8BCB          mov     ecx, ebx
+215D4342  |.  E8 89000000   call    <sub_215D43D0>
+215D4347  |.  5F            pop     edi
+215D4348  |.  5E            pop     esi
+215D4349  |.  5D            pop     ebp
+215D434A  |.  B0 01         mov     al, 1
+215D434C  |.  5B            pop     ebx
+215D434D  \.  C2 0400       retn    4
+
+
+
+返回到最早跟入的那里继续
+
+215C4E17   .  8D8D 3CF7FFFF lea     ecx, dword ptr [ebp-8C4]
+215C4E1D   .  E8 7EF40000   call    <sub_215D42A0>
+215C4E22   .  6A 20         push    20                               ; /maxlen = 20 (32.)
+215C4E24   .  8D8D 7CFFFFFF lea     ecx, dword ptr [ebp-84]          ; |
+215C4E2A   .  50            push    eax                              ; |src     这里是刚才md5后的字符串
+215C4E2B   .  51            push    ecx                              ; |dest
+215C4E2C   .  FF15 D4015F21 call    dword ptr [<&MSVCRT.strncpy>]    ; \strncpy     保存一遍
+215C4E32   .  83C4 0C       add     esp, 0C
+215C4E35   .  8D8D F4F9FFFF lea     ecx, dword ptr [ebp-60C]
+215C4E3B   .  E8 00E80000   call    <sub_215D3640>
+215C4E40   .  8D95 7CFFFFFF lea     edx, dword ptr [ebp-84]
+215C4E46   .  8D8D F4F9FFFF lea     ecx, dword ptr [ebp-60C]
+215C4E4C   .  52            push    edx
+215C4E4D   .  C645 FC 03    mov     byte ptr [ebp-4], 3
+215C4E51   .  E8 9AE80000   call    <sub_215D36F0>                   ;  对第一次md5的结果再次md5
+215C4E56   .  B9 08000000   mov     ecx, 8
+215C4E5B   .  33C0          xor     eax, eax
+215C4E5D   .  8DBD 7CFFFFFF lea     edi, dword ptr [ebp-84]
+215C4E63   .  F3:AB         rep     stos dword ptr es:[edi]
+215C4E65   .  66:AB         stos    word ptr es:[edi]
+215C4E67   .  8D8D F4F9FFFF lea     ecx, dword ptr [ebp-60C]
+215C4E6D   .  AA            stos    byte ptr es:[edi]
+215C4E6E   .  E8 2DF40000   call    <sub_215D42A0>
+215C4E73   .  6A 20         push    20                               ; /maxlen = 20 (32.)
+215C4E75   .  50            push    eax                              ; |src
+215C4E76   .  8D85 7CFFFFFF lea     eax, dword ptr [ebp-84]          ; |
+215C4E7C   .  50            push    eax                              ; |dest
+215C4E7D   .  FF15 D4015F21 call    dword ptr [<&MSVCRT.strncpy>]    ; \strncpy     到这里为止密码的hash就出来了 
+此帖于 2007-08-21 19:15:06 被 theOcrat 最后编辑 原因: 详细环境
+
+[公告]如果你觉得有人语言挑衅，请点每帖右上角的“举报”按钮！
+回复时引用此帖  返回顶端
