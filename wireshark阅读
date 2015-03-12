@@ -21,3 +21,24 @@
 		（电脑到分流器端口），一个嗅探流入方向的网络流量。
 ARP欺骗：（ARP缓存中毒）通过发送包含虚假MAC地址的ARP消息，以劫持其他计算机流量的过程。
 “网络地图”：网络拓扑图：一个显示了所有技术资源以及他们之间连接关系的图形表示。
+wireshark使用：
+	Packet List（数据包列表）：最上面面板，数据包序号，捕获时间源地址目标地址，协议等
+	Packet Details（数据包细节）：数据包内容
+	Packet Bytes（数据包字节）：未经处理的原始样子
+首选项：Preferences：
+	User Interface：用户接口：如何显示数据
+	Capture（捕获）：捕获方式
+	Printing （打印）
+	Name Resolution（名字解析）：将地址解析为名字
+	Statistics（统计）
+	Protocals（协议）
+Coloring Rules：查看每个协议对应的颜色。
+保存/合并捕获文件。
+Ctrl-F打开Find Packet对话框：Display filter：输入表达式;Hex value：十六进制数;String：字符串
+Ctrl-N/B：下一个/上一个;
+标记/打印数据包
+绝对/相对时间
+过滤器：定义了一定条件，用来包含或者排除数据包的表达式。
+捕获过滤器：BPF（Berkeley Packet Filter）：表达式包含一个或多个原语，原语包含一个或多个限定词，然后跟着一个ID或者数字。连接运算符 与 &&;选择运算符 或 ||;否定 非 ！。主机/端口/协议过滤器
+显示过滤器：
+查看端点/网络会话;
