@@ -92,6 +92,36 @@ RTN的检测函数的作用是做地址、端口、方向等的检测配置。
 	CheckDstPortEqual：检测当前规则链表头结构中的目的端口是否与数据包中目的端口相等
 	CheckSrcIP：检测来源IP地址
 	CheckDstIP：检测目的IP地址
-CheckBidirectional：在设置了双向操作标识符的情况下，分别检测源IP地址和端口值的匹配情况。	
+CheckBidirectional：在设置了双向操作标识符的情况下，分别检测源IP地址和端口值的匹配情况。
+CheckAddrPort：将规则头中的地址、端口和数据包中的地址、端口进行匹配，成功返回1否则返回0.
+端口的检测：需要匹配来源端口、目的端口，同时，如果规则中有不等标志“！”还需检测不等的情况。
+	CheckSrcPortNotEq
+	CheckDstPortNotEq
+	CheckSrcPortEqual
+	CheckDstPortEqual
+地址的检测：源地址和目的地址的匹配，还需处理设置了取反标识符！的情况。
+	CheckSrcIP
+	CheckDstIP
+规则选项关键字插件的实现：
+负载长度的检测：负载长度关键字dsize选项用于定义被捕获包的负载长度或长度范。
+void SetupDsizeCheck(void)
+void DsizeCheckInit(char *, OptTreeNode *, int);
+void ParseDsize(char *, OptTreeNode *);
+int CheckDsizeEq(Packet *, struct _OptTreeNode *, OptFpList *);
+int CheckDsizeGT(Packet *, struct _OptTreeNode *, OptFpList *);
+int CheckDsizeLT(Packet *, struct _OptTreeNode *, OptFpList *);
+int CheckDsizeRange(Packet *, struct _OptTreeNode *, OptFpList *);
+前两个函数用于插件的注册和初始化，第三个用于解析对应的规则配置参数。后四个分别处理等于、大于、小于或者在某个范围内的四个情况。
+ParseDsize：解析dsize关键字的参数并存入对应的OTN结构字段中，然后根据解析结果，在规则选项节点中链入对应的处理函数。
+Session关键字：用于从TCP会话中抽取用户数据。可以检查用户在telnet，rlogin，ftp或web sessions中的用户输入。
+void SetupSession(void)
+void SessionInit(char *, OptTreeNode *, int);
+void ParseSession(char *, OptTreeNode *);关键字参数配置的解析
+int LogSessionData(Packet *, struct _OptTreeNode *, OptFpList *);调用相应的子例程来记录进程的信息。
+void DumpSessionData(FILE *, Packet *, struct _OptTreeNode *);处理进程信息的实际记录工作
+FILE *OpenSessionFile(Packet *);打开用来记录进程信息的文件
+ICMP选项集合：
+snort的攻击特征描述中有四种有ICMP有关的选项，用来检测ICMP包中的不同字段，包括ICMP的类型、代码、ID和序列号，对应插件的源文件为sp_icmp_type_check.c，sp_icmp_code_check，sp_icmp_id_check.c，sp_icmp_seq_check
+ICMP ID用于匹配ICMP回响请求（ICMP_ECHO）中的ID域，
 
                 
