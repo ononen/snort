@@ -121,7 +121,17 @@ int LogSessionData(Packet *, struct _OptTreeNode *, OptFpList *);调用相应的
 void DumpSessionData(FILE *, Packet *, struct _OptTreeNode *);处理进程信息的实际记录工作
 FILE *OpenSessionFile(Packet *);打开用来记录进程信息的文件
 ICMP选项集合：
-snort的攻击特征描述中有四种有ICMP有关的选项，用来检测ICMP包中的不同字段，包括ICMP的类型、代码、ID和序列号，对应插件的源文件为sp_icmp_type_check.c，sp_icmp_code_check，sp_icmp_id_check.c，sp_icmp_seq_check
+snort的攻击特征描述中有四种有ICMP有关的选项，用来检测ICMP包中的不同字段，包括ICMP的类型、代码、ID和序列号，
+对应插件的源文件为sp_icmp_type_check.c，sp_icmp_code_check，sp_icmp_id_check.c，sp_icmp_seq_check
 ICMP ID用于匹配ICMP回响请求（ICMP_ECHO）中的ID域，
-
+此选项用于检测那些利用ICMP包进行通信的欺骗性程序。格式：icmp_id:参数值。
+sp_icmp_id_check.c中共包含了注册、初始化、参数解析和检测四个函数。
+代码（icode）选项用于检测ICMP包的代码域的值：一是定义为某个特定含义的值，二是定义为一个非法值。后者对于发现欺骗洪流、DoS攻击有所帮助。
+实时响应的选项resp（sp_respond.c）允许Snort自动阻断触发规则的连接，最为强大的基于协议的规则选项体。
+使用动态响应修饰符的格式为：resp：修饰符1,修饰符2,……
+ParseRespond函数用于配置参数的解析，并设置相应的修饰符。
+Respond函数根据当前节点中响应标识的设置情况，进行不同的响应操作。最后实现封包发送的功能是由SendTCPRST和SendICMP_UNREACH完成。
+输出检测结果：
+报警日志输出流程：函数Preprocess(Packet * p)在检测引擎完成后，调用retval = SnortEventqLog(p)来执行输出插件。
+SnortEventLog先调用sfeventq_action函数来判断是否需要进行日志事件的记录，若需要，则是通过其第一个参数——函数LogSnortEvents来实现。
                 
