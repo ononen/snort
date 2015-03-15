@@ -1,1 +1,21 @@
-流程
+Snort.c(.h)是主程序所在的文件，实现了main函数和一系列辅助函数。
+decode.c(.h)把数据包层层剥开，确定该包属于何种协议，有什么特征。并标记到全局结构变量pv中。 
+log.c(.h）实现日志和报警功能。Snort有多种日志格式，一种是按tcpdump二进制的格式存储，
+          另一种按Snort编码的ASCII格式存储在日志目录下，日志目录的名字根据"外"主机的ip地址命名。
+          报警有不同的级别和方式，可以记录到syslog中，或者记录到用户指定的文件，另外还可以通过UNIX socket发送报警消息
+          ，以及利用SMB向Windows系统发送winpopup消息。
+mstring.c(.h)实现字符串匹配算法。在Snort中，采用的是Boyer-Moore算法。算法书上一般都有。
+plugbase.c(.h)实现了初始化检测以及登记检测规则的一组函数。Snort中的检测规则以链表的形式存储，
+          每条规则通过登记（Register）过程添加到链表中。(注意相应的数据结构！[Evan])
+response.c(.h)进行响应，即向攻击方主动发送数据包。这里实现了两种响应。一种是发送ICMP的主机不可到达的假信息，
+          另一种针对TCP，发送RST包，断开连接。（2.0中没有该文件[Evan]）
+rule.c(.h)实现了规则设置和入侵检测所需要的函数。规则设置主要的作用是把一个规则文件转化为实际运作中的规则链表。
+          检测函数根据规则实施攻击特征的检测。
+sp_*_check.c(.h)是不同类型的检测规则的具体实现。很容易就可以从文件名得知所实现的规则。
+          例如，sp_dsize_check针对的是数据包的大小，sp_icmp_type_check针对icmp包的类型，sp_tcp_flag_check针对
+          tcp包的标志位。不再详述。
+spo_*.c(.h)实现输出（output）规则。spo_alert_syslog把事件记录到syslog中；spo_log_tcpdump利用libpcap中的日志函数，
+          进行日志记录。
+spp_*.c(.h)实现预处理（preprocess）规则。包括http解码（即把http请求中的%XX这样的字符用对应的ascii字符代替，
+          避免忽略了恶意的请求）、最小片断检查（避免恶意利用tcp协议中重组的功能）和端口扫描检测。
+（～～）
