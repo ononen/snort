@@ -9,3 +9,108 @@ BitTorrent是一种P2P协议。用于在对等网络中，用户群和用户群(
  原始下载者（发布资源者）
  终端用户浏览器(下载.torrent种子)
  终端用户下载者
+一个种子文件，通常是以.torrent后缀结尾。BitTorrent协议规定，torrent文件本身，内容必须是utf8编码格式，
+并且其中的字段结构采用bencoding编码格式。
+Torrent种子文件由两部分组成：announce（tracker url）和文件信息。
+下面以一个正常的torrent文件来分析种子文件的结构。
+该种子文件的一部分如下：
+d8:announce78:http://www.chinahdtv.org/announce.php?passkey=6e7a1c7ca4164d87e9b0e00ec63aa74910:created 
+by13:uTorrent/204013:creation datei1369699038e8:encoding5:UTF-84:infod5:filesld6:lengthi158784e4:pathl53:
+Iron.Man.3.2013.HDSCR.ULTRA.EDiTiON.720p.x264.chn.srteed6:lengthi107117e4:pathl54:Iron.Man.3.2013.HDSCR.
+ULTRA.EDiTiON.720p.x264.chn1.srteed6:lengthi93644e4:pathl54:Iron.Man.3.2013.HDSCR.ULTRA.EDiTiON.720p.x264.
+chn2.srteed6:lengthi4272200020e4:pathl49:Iron.Man.3.2013.HDSCR.ULTRA.EDiTiON.720p.x264.mkveee4:name56:钢铁侠3.
+Iron.Man.3.2013.HDSCR.ULTRA.EDiTiON.720p.x26412:piece lengthi4194304e6:pieces20380:012ef......:privatei1e6:
+source23:[hd.gg] CNHD  ChinaHDTVee
+根据bencoding编码格式，把这段字符解码还原后，就是如下内容：
+announce:http://www.chinahdtv.org/announce.php?passkey=6e7a1c7ca4164d87e9b0e00ec63aa749
+created by:uTorrent/2040
+creation date:1369699038
+encoding:UTF-8
+info:
+{files:[
+{length:158784,path:[Iron.Man.3.2013.HDSCR.ULTRA.EDiTiON.720p.x264.chn.srt]}, {length:107117,path:
+[Iron.Man.3.2013.HDSCR.ULTRA.EDiTiON.720p.x264.chn1.srt]}, {length:93644,path:[Iron.Man.3.2013.HDSCR.ULTRA.
+EDiTiON.720p.x264.chn2.srt]},
+{length:4272200020,path:[Iron.Man.3.2013.HDSCR.ULTRA.EDiTiON.720p.x264.mkv]}],
+name:钢铁侠3.Iron.Man.3.2013.HDSCR.ULTRA.EDiTiON.720p.x264,
+piece length:4194304,
+pieces:P1,P2,P3...P1019
+private:1
+source:[hd.gg] CNHD ChinaHDTV
+}
+关于具体bencoding编码，请参考引用中的链接。从上面的结果可以看出，一个torrent种子文件有点类似于XML格式的文件，
+包含如下组成部分：
+ tracker地址，这里就是announce后面的url
+ 种子创建软件及其版本号，这里是uTorrent软件创建的，版本号为2040
+ 创建日期，这里是1369699038，这个数字显示的是从UTC 1970-1-1 00:00:00到到现在所经历的秒数，如果你用工具转换一下，
+           你会发现创建的时间是2013-5-28 7:57:18
+ 编码格式，这里是UTF-8
+ info区，这里指定的是该种子有几个文件，文件有多长，目录结构，以及目录和文件的名字，从上面的结果，可以看出这个种子
+            有4个文件，3个字幕，一个视频文件
+ Name字段，指定顶层目录名字
+ 每个段的大小，Bittorrent协议是把一个文件分成很多个小段，然后分段下载的，这个地方就是指定每个段的大小，单位是字节，
+            这里每个段的大小大约为4MB
+ 段哈希值，就是整个种子中，每个段的SHA1哈希值拼在一起，后面的那个省略号是全部段的SHA1哈希值，很长，这里用省略号代替
+            每个段的哈希长度是固定的，20个字符，所以pieces后面跟的那个数字20380其实是段数量*20，如果你用20380除以20
+            就会发现这个种子段数量为1019，乘上前面的段大小，这个种子大概有4GB大小，也就是说你把这个种子下载完后，
+            占硬盘4GB空间
+ private值，这个属性主要显示这个种子是私有的，还是公有的。一般那些各大PT站就是私有的。私有的种子会禁掉DHT
+            (distributed hash table)，因为如果你的client开这个功能，那就会跳过tracker来和其他peer进行数据交换，
+            在很多PT内站(CHDbits,CMCT,CNHD)把这种行为称为作弊，会直接ban掉你在PT站上的帐号。关于DHT的具体信息，
+            请参考引用中的链接。
+ 源，显示该种子的来源，这里是CNHD
+注意，以上的每个属性并不是必须的，有的属性属于BitTorrent Enhancement Proposals (BEPs)，就是BitTorrent协议的扩展，
+虽然不属于正式标准的一部分，但是很多客户端都支持这种格式
+～
+BitTorrent通信流程与网络包结构：
+BitTorrent协议支持基于TCP或UTP网络协议进行数据传输，但是由于TCP协议是有连接的，需要先进行握手。在进行数据传输的过程
+中，每个种子会占有大量的TCP连接，从而占有大量的用户带宽。这给其他需要高实时性的应用造成很大的网络压力。
+于是BitTorrent又支持UTP协议用来进行数据传输，这也是当前大部分BT下载客户端所采用的实现方式。UTP(uTorrent Transport 
+Protocol)是基于UDP网络协议的，也就是无连接协议，采用这种协议进行数据交换，可以很容易进行带宽控制，不会造成网络拥堵
+下面主要分析BitTorrent中的UTP协议，因为这个常用嘛！
+UTP协议的包结构如下：（不包含UDP header）
+
+Fig. 1 UTP包结构(来自bittorrent.org)
+ type：数据包类型，0--带负载数据包，就是通常在连接建立后，上传数据或下载数据的包；1--连接结束数据包，结束一个连接
+       2--数据回应包，当一个peer收到一个带负载数据包后，会回一个ACK包，来表示这个包已正确接收，有点类似于TCP的SYN
+       的感觉，但是这个是在UDP包的数据段做连接控制；3--重置连接；4--开始一个连接
+ ver：协议版本，通常为1
+ extension：扩展段，用于支持BEPs
+ connection_id：连接id，同一个连接id的数据包属于一个连接，一般每两个peer之间会开两个连接，一个用于发，一个用于收
+ timestamp_microseconds：包的发送时间
+ timestamp_difference_microseconds：对于当前连接，最近收到的包时间和当前要发送的包之间的时间间隔
+ wnd_size：发送方当前剩余窗口大小，用于进行速度和带宽控制。BitTorrent协议中每一个发出去的数据包，都要求接收方回
+           一个ACK包。而一个peer的窗口大小是指当前发送出去，但还没有收到回应的包的总大小，单位为字节。每一个peer
+           都一个最大窗口值和一个窗口大小上限值。当wnd_size小于最小UTP包大小的时候，发送方会停止发送数据包，或调整
+           每个数据包的数据负载大小
+ seq_nr：相对于一个连接，数据包的序列号，以一个包为计数单位
+ ack_nr：发送方最近接收到的包的序列号
+可能说这么多，有点混乱了，下面以一个具体的UTP包做说明。
+数据包内容如下：
+0000   78 ac c0 55 45 4a 00 0c 86 23 b8 00 08 00 45 00
+0010   00 30 2f e7 00 00 66 11 a4 23 01 a4 60 2e db f6
+0020   42 ea 8f b9 cf 46 00 1c 00 00 21 00 19 a2 ec 07
+0030   ea 27 c3 62 4a be 00 37 f5 10 11 89 32 d4
+其中0x00-0x29是UDP header，这里不再分析。咱来看一下它的数据部分：
+210019a2ec07ea27c3624abe0037f510118932d4
+可以看出来：
+ 0x2是type字段，代表这是一个数据回应包
+ 0x1是它的协议版本号
+ 0x00是它的扩展字段
+ 00代表该包没有扩展信息
+ 0x19a2是该包的连接id，这是一个随机数
+ 0xec07ea27是该包的发送时间
+ 0xc3624abe是这个包的发送方最近一次接收包到这次发生包之间的间隔，间隔这么长，表示当前网络环境不行，数据传输速度
+ 不是很快
+ 0x0037f510是发送方的窗口大小，也就是说当前发送方还可以接收3.5MB的数据
+ 0x1189是该数据包的序列包，也就意味着发送方在这个连接上已经发送了4489个包
+ 0x32d4是该发送方最近接受到的包序列号
+BitTorrent数据包的特征与识别
+由于BitTorrent数据包是应用层协议，所以必须要通过DPI技术，才能识别这种协议的流量。识别这种流量有两种方法：
+一是检测两个peer之间的大流量连接。如果发现两个ip之间出现大量异常udp数据包，可以采取丢包的方式，来限制传输速率。
+另外一种方法，就是运用DPI技术，读取UDP数据部分，如果发现大量的UDP包的负载前几个字节是0x0100，则判断为BitTorrent流量
+，并采取相应的措施。
+References
+1. http://en.wikipedia.org/wiki/BitTorrent_client
+2. http://en.wikipedia.org/wiki/BitTorrent
+3. http://www.bittorrent.org/beps/bep_0000.html
