@@ -1,0 +1,7 @@
+static void ParseCmdLine(int argc ,char **argc)
+{
+	int ch;
+	int option_index = -1;
+	char *endptr;  /*for SnortStrol calls*/
+	SnortConfgi *sc;
+}
