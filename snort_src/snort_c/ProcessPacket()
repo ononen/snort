@@ -1,0 +1,58 @@
+// DAQ_Verdict ?
+DAQ_Verdict ProcessPacket(
+	Packet* p,const DAQ_PktHdr_t* pkthdrm const unit8_t* pkt, void* ft)
+	DAQ_Verdict verdict = DAQ_VERDICT_PASS;
+	//set runtime policy to default...idx is same for both nap & ips
+	//??pkth ft
+	setNapRuntimePolicy(getDefaultPolicy());
+	setIpsRuntimePolicy(getDefaultPolicy());	
+
+	/*call the packet decoder*/
+	(*grinder) ()(p, pkthdr, pkt);
+	assert(p->pkth && p->pkt);
+	
+	if (ft)
+	{
+		//?|=
+		p->packet_flags |= (PKT_PSEUDO | PKT_REBUILT_FRAG);
+		p->pseudo_type = PSEUDO_PKT_IP;
+		p->fragtracker = ft;
+		Encoder_SetPkt(p);	
+	}
+	if ( !p->proto_bits)
+		p->proto_bits = PROTO_BIT__OTHER;
+	
+	//required until decoders are fixed
+	else if ( !p->family && (p->proto_bits & PROTO_BIT__IP ) )
+		P->proto_bits &= ~PROTO_BIT__IP;
+	
+	/** Policy specific decoding should into this function*/
+	p->configPolicyId = snort_conf->targeted_policies[ getNapRuntimePolicy() ]->configPolicyId;
+
+	/*just throw away the packet if we are configured to ignore this port */	if( !(p->packet_flags & PKT_IGNORE) )
+	{
+		/* start calling the detection peocess*/
+		Preprocess(p);
+		log_func(p);
+	}
+
+	if( Active _SessionWasDropped() )
+	{
+		if( !Active_PacketForceDropped() )
+			Active_DropAction(p);
+		else 	
+			Active_ForceDropAction(p);
+
+		if( Active_GetTunnelBypass() )
+		{
+			pc.internal_blacklist++;
+			return verdict;
+		}
+		
+		if (ScIpInlineMode() || Active_PacketForceDropped() )
+			verdict = DAQ_VERDICT_BLACKLIST;
+		else 
+			verdict = DAQ_VERDICT_IGNORE;
+	}
+	
+		
