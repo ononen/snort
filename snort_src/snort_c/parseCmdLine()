@@ -1,7 +1,111 @@
+/*
+	Function:ParseCmdLine(int ,char **)
+	
+	Parse command line arguments
+	Arguments:
+	int
+		count of arguments passed to the routine
+	char **
+		2-D character aarray, contains list of command line args
+	Returns:None	
+*/
 static void ParseCmdLine(int argc ,char **argc)
 {
 	int ch;
 	int option_index = -1;
 	char *endptr;  /*for SnortStrol calls*/
 	SnortConfgi *sc;
+	int output_logging = 0;
+	int output_alterting = 0;
+	int syslog_configured = 0;
+#ifndef WIN32
+	int daemon_configured = 0;
+#endif
+	
+	int version_flag_parsed = 0;
+	int quiet_flag_parsed = 0;
+
+	DEBUG_WRAP(DebugMessage(DEBUG_INIT, "Parsing command line...\n"););;
+
+	if(snort_cmd_line_conf != NULL)
+	{
+		FatalError("%s(%d) Trying to parse the command line again.\n",
+			__FILE__,__LINE__);
+	}
+
+	snort_cmd_line_conf = SnortConfNew();
+	snort_conf = snort_cmd_line_conf; /*Set the global for log message*/
+	sc = snort_cmd_line_conf;
+
+	optind = 1;
+	
+	/*
+		Look for a -D and/or -M switch so we van start logging tosyslog
+		with "snort" tag right away*/
+	while ((ch = getopt_long(argc,argv,valid_options, long_options ,&option_index)) != -1)
+	{
+		switch (ch)
+		{
+			case 'M':
+				if (syslog_configured)
+					break;
+				/*if daemon or logging to syslog use "snort" as identifier and
+				 * start logging there now*/
+				openlog("snort",LOG_PID | LOG_CONS, LOG_DAEMON);
+				
+				sc->logging-flas |= LOGGING_FLAG__SYSYLOG;
+				syslog_configured = 1;
+				break;
+#ifndef WIN32
+			case 'E':
+				sc->run_flags |= RUN_FLAG__DAEMON_RESTART;
+				/*Fall through*/
+			case 'D':
+				if (daemon_configured)
+					break;
+				/*If daemon or logging to syslog use "snort" as identifier and
+				 * start logging there now */
+				 open("snort", LOG_PID | LOG_CONS, LOG_DAEMON);
+				 
+				 ConfigDaemon(sc, optarg);
+				 daemon_configured = 1;
+				 break;
+#endif		
+			case 'V':
+				version-flag_parsed = 1;
+				break;
+			
+			case: 'q':
+				quiet_flag_parsed=1;
+				break;
+				
+			case '?': /*show help and exit with 1 */
+				PrintVersion();
+				ShowUsage(argv[0]);
+				exit(1);
+				break;
+				
+			default:
+				break;
+		}
+	}
+	if (version_flag_parsed)
+	{
+		sc->run_mod_flags |= RUN_MODE_FLAG__VERSION;
+	}
+	else if (quiet_flag_parsed)
+	{
+		ConfigQuiet(sc, NULL);
+		internal_log_level = INTERNAL_LOG_LEVEL__ERROR;
+	}
+	/*
+	 * Set this so we know whether to return 1 on invalid input.
+	 * Snort uses '?' for help and getopt uses '?' for telling us there
+	 * was an invalid option ,so we cannot use that to tell invalid input.
+	 * Instead ,we check optopt and it will tell us.
+	 */
+	 optopt = 0;
+	 optind = 1;
+	 /* loop through each command line var and process it */
+	 while ()
 }
