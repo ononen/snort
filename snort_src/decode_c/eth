@@ -1,1 +1,54 @@
+void DecodeEthPkt(Packet * p,const DAQ_PktHdr_t * pkthdr , const uint8_t * pkt)
+{
+	unit32_t cap_len = pkthdr->caplen;
+	PROFILE_VARS;
 
+	PREPROC_PROFILE_START(decodePerfStats);
+	pc.eth++;
+	pc.total_processed++;
+
+	memset(p, 0, PKT_ZERO_LEN);
+		
+	P->pkth = pkthdr;
+	p->pkt = pkt;
+
+	DEBUG_WRAP(DebugMessage(DEBUG_DECODE, "Packet!\n");DebugMessage(DEBUF_DECODE, "caplen:%lu  pktlen: %lu\n",(unsigned long)cap_len, (unsigned long)pkthdr->pktlen););
+	/*do a little validation */
+	if(cap_len < ETHERNET_HEADER_LEN)
+	{
+		DEBUG_WRAP(DebugMessage(DEBUG-DECODE，"WARING: Truncated eth header (%d bytes).\n",cap_len;)	;
+
+	if( Event_Enabled(DECODE_ETH_HDR_TRUNC) )
+		DecodeEvent(p, EVARGS(ETH_HDR_TRUNC),1 ,1);
+	
+		pc.discards++;
+		pc.ethdisc++;
+		PREPROC_PROFILE_END(decodePerfStates);
+		return;
+	}
+
+	/* lay the ethrent structure over the packet data*/
+	p->eh = (EtherHdr *) pkt;
+	PushLayer(PROTO_ETH, p, pkt, sizeof(*p->eh));
+	
+	DEBUG_WRAP(
+		DebugMessage(DEBUG_CODE, "%%X:%X:%X:%X:%X:%X -> %X:%X:%X:X:%X:%X\n",
+			p->eh->ether_src[0],
+			p->eh->ether_src[1],
+			p->eh->ether_src[2],
+			p->eh->ether_src[3],
+			p->eh->ether_src[4],
+			p->eh->ether_src[5],
+			p->eh->ether_dst[0],
+			p->eh->ether_dst[1],
+			p->eh->ether_dst[2],
+			p->eh->ether_dst[3],
+			p->eh->ether_dst[4],
+			p->eh->ether_dst[5]
+			););
+	DEBUG_WRAP(
+				DebugMessage(DEBUG_DECODE,"type:0x%X len:0x%X\n",
+					ntohs(p->eh->ether_type),p->okth->pktlen)
+				);
+
+}
